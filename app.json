@@ -8,6 +8,12 @@
     "scheme": "ecocartfrontend",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "//": "--- 关键修改结束 👆 ---",
+    "splash": {
+      "image": null,
+      "resizeMode": "contain",
+      "backgroundColor": "#34D399"
+    },
     "ios": {
       "supportsTablet": true
     },
@@ -27,18 +33,8 @@
     },
     "plugins": [
       "expo-router",
-      [
-        "expo-splash-screen",
-        {
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
-          "dark": {
-            "backgroundColor": "#000000"
-          }
-        }
-      ]
+      "expo-splash-screen",
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true,
