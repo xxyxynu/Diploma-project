@@ -1,21 +1,69 @@
 import { AntDesign, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import {
+    ActivityIndicator,
+    Alert,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
+} from "react-native";
+import { useUserStore } from "../../store/userStore";
+import * as SecureStore from "expo-secure-store";
+import { authApi } from "../../api/auth";
 
 export default function Login() {
     const router = useRouter();
+    const login = useUserStore((state) => state.login);
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
 
-    const handleLogin = () => {
-        // 这里写登录逻辑 (API请求)
-        console.log("Login with:", email, password);
+    const [loading, setLoading] = useState(false);
 
-        // 登录成功后，使用 replace 跳转到主页 (防止用户按返回键回到登录页)
-        router.replace("/(tabs)");
+    const handleLogin = async () => {
+        if (!email || !password) {
+            Alert.alert("Missing Fields", "Please enter your email and password.");
+            return;
+        }
+
+        setLoading(true);
+
+        try {
+            console.log("正在登录...", email);
+            const data = await authApi.login({ email, password });
+
+            console.log("登录成功:", data);
+
+            if (data.token) {
+                await SecureStore.setItemAsync("user_token", data.token);
+                // 也可以顺便存个用户名，以后在 Profile 页面用
+                if (data.name) {
+                    await SecureStore.setItemAsync("user_name", data.name);
+                }
+                login({
+                    _id: data._id,
+                    name: data.name,
+                    email: data.email,
+                    token: data.token
+                });
+            }
+
+            // 5. 跳转到主页 (销毁当前栈，用户点返回键不会退回登录页)
+            router.replace("/(tabs)");
+
+        } catch (error: any) {
+            console.error("登录失败:", error);
+            // 获取后端具体的错误信息 (比如 "Invalid credentials")
+            const msg = error.response?.data?.message || "Login failed. Please check your network.";
+            Alert.alert("Login Error", msg);
+        } finally {
+            // 6. 关闭 Loading
+            setLoading(false);
+        }
     };
 
     return (
@@ -24,34 +72,9 @@ export default function Login() {
 
                 {/* 顶部绿色 Header (带水果背景) */}
                 <View className="bg-primary pt-20 pb-12 px-6 rounded-b-[30px] relative overflow-hidden shadow-sm">
+                    <MaterialCommunityIcons name="leaf" size={140} color="white" style={{ position: 'absolute', right: -30, bottom: -20, opacity: 0.1, transform: [{ rotate: '-15deg' }] }} />
+                    <MaterialCommunityIcons name="food-apple" size={100} color="white" style={{ position: 'absolute', left: -20, top: 20, opacity: 0.1, transform: [{ rotate: '15deg' }] }} />
 
-                    {/* 装饰图标：苹果 (绝对定位) */}
-                    <MaterialCommunityIcons
-                        name="food-apple-outline"
-                        size={80}
-                        color="white"
-                        style={{
-                            position: 'absolute',
-                            top: 50,
-                            left: 20,
-                            opacity: 0.2, // 透明度，制造水印效果
-                            transform: [{ rotate: '-15deg' }]
-                        }}
-                    />
-
-                    {/* 装饰图标：萝卜 (绝对定位) */}
-                    <MaterialCommunityIcons
-                        name="carrot"
-                        size={80}
-                        color="white"
-                        style={{
-                            position: 'absolute',
-                            top: 40,
-                            right: 10,
-                            opacity: 0.2, // 透明度
-                            transform: [{ rotate: '15deg' }]
-                        }}
-                    />
 
                     {/* Header 文字内容 */}
                     <View className="items-center justify-center z-10">
@@ -74,7 +97,7 @@ export default function Login() {
                         <View className="flex-row items-center bg-gray-100 rounded-2xl px-4 py-3 border border-gray-100 focus:border-primary">
                             <Ionicons name="mail-outline" size={20} color="#9CA3AF" />
                             <TextInput
-                                className="flex-1 ml-3 text-gray-700"
+                                className="flex-1 ml-3 text-gray-700 font-pregular"
                                 placeholder="hello@ecocart.app"
                                 keyboardType="email-address"
                                 autoCapitalize="none"
@@ -90,7 +113,7 @@ export default function Login() {
                         <View className="flex-row items-center bg-gray-100 rounded-2xl px-4 py-3 border border-gray-100 focus:border-primary">
                             <Ionicons name="lock-closed-outline" size={20} color="#9CA3AF" />
                             <TextInput
-                                className="flex-1 ml-3 text-gray-700"
+                                className="flex-1 ml-3 text-gray-700 font-pregular"
                                 placeholder="••••••••"
                                 secureTextEntry={!showPassword}
                                 value={password}
@@ -111,12 +134,17 @@ export default function Login() {
                         <Text className="text-primary font-pregular text-sm">Forgot password?</Text>
                     </TouchableOpacity>
 
-                    {/* Log In Button */}
+                    {/* Log In Button (带 Loading) */}
                     <TouchableOpacity
-                        className="bg-primary rounded-2xl py-4 shadow-md shadow-primary-light"
+                        className={`rounded-2xl py-4 shadow-md shadow-primary-light flex-row justify-center items-center ${loading ? 'bg-green-300' : 'bg-primary'}`}
                         onPress={handleLogin}
+                        disabled={loading} // Loading 时禁止点击
                     >
-                        <Text className="text-white text-center font-pbold text-lg">Log in</Text>
+                        {loading ? (
+                            <ActivityIndicator color="white" />
+                        ) : (
+                            <Text className="text-white text-center font-pbold text-lg">Log in</Text>
+                        )}
                     </TouchableOpacity>
 
                     {/* Divider */}

@@ -7,12 +7,16 @@ import {
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from "react";
-import "./globals.css"; // 确保引入了全局样式
+import { use, useEffect } from "react";
+import "./globals.css";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 
+// Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  usePushNotifications();
+
   const [fontsLoaded, error] = useFonts({
     "Poppins-Regular": Poppins_400Regular,
     "Poppins-Medium": Poppins_500Medium,
@@ -21,30 +25,38 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
+    if (error) throw error;
+  }, [error]);
+
+  useEffect(() => {
     if (fontsLoaded) {
-      // 字体加载完了，隐藏启动屏，显示 App
-      SplashScreen.hideAsync();
+      // Hide splash screen when fonts are loaded
+      SplashScreen.hideAsync().catch((err) => {
+        console.warn('Error hiding splash screen:', err);
+      });
     }
   }, [fontsLoaded]);
 
   if (!fontsLoaded) {
-    return null; // 在字体加载好之前不渲染任何东西
+    return null;
   }
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      {/* (tabs) 文件夹是底部导航，隐藏原生 Header */}
+      <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      {/* (auth) 文件夹不需要 Header */}
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-      {/* 详情页通常需要一个返回按钮，所以可以开启 Header */}
+      <Stack.Screen name="fridge-management" options={{ headerShown: false }} />
+      <Stack.Screen name="shopping-list/index" options={{ headerShown: false }} />
+      <Stack.Screen name="community/index" options={{ headerShown: false }} />
+      <Stack.Screen name="cookbook/index" options={{ headerShown: false }} />
       <Stack.Screen
         name="food/[id]"
-        options={{ title: "食品详情", headerShown: true }}
+        options={{ title: "Food Details", headerShown: false }}
       />
       <Stack.Screen
         name="add-manual"
-        options={{ title: "手动添加", presentation: "modal" }}
+        options={{ title: "Add Item", presentation: "modal" }}
       />
     </Stack>
   );

@@ -1,6 +1,7 @@
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import { View } from "react-native";
+import { useFridgeInit } from "../../hooks/useFridgeInit";  // ← ADD THIS
 
 // 这是一个辅助函数，用来决定渲染哪个图标
 // 我们混合使用了 Ionicons (首页/人) 和 MaterialCommunityIcons (冰箱/扫码)
@@ -12,6 +13,8 @@ const TabIcon = ({ focused, color, size, iconName, library = "Ionicons" }: any) 
 };
 
 export default function TabLayout() {
+  useFridgeInit();
+
   return (
     <Tabs
       screenOptions={{

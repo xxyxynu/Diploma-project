@@ -1,27 +1,63 @@
 import { AntDesign, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import {
+    ActivityIndicator,
+    Alert,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
+} from "react-native";
+
+import * as SecureStore from "expo-secure-store";
+import { authApi } from "../../api/auth";
+import { useUserStore } from "../../store/userStore";
 
 export default function SignUp() {
     const router = useRouter();
+    const login = useUserStore((state) => state.login);
 
-    // 表单状态管理
+    // 
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
 
-    // UI 交互状态
     const [showPassword, setShowPassword] = useState(false);
     const [isChecked, setIsChecked] = useState(false);
 
-    const handleSignUp = () => {
-        // 这里写注册逻辑 (API调用)
-        console.log("Sign Up with:", name, email, password);
+    const [loading, setLoading] = useState(false);
 
-        // 注册成功后，通常跳转到登录页让用户登录，或者直接存储 Token 跳进首页
-        // 目前演示跳转到登录页
-        router.push("/login");
+    const handleSignUp = async () => {
+        setLoading(true);
+
+        try {
+            const data = await authApi.register({ name, email, password });
+
+            // 3. 修复逻辑：不仅要存 SecureStore，还要更新 Zustand Store
+            if (data.token) {
+                await SecureStore.setItemAsync("user_token", data.token);
+                if (data.name) {
+                    await SecureStore.setItemAsync("user_name", data.name);
+                }
+
+                // ✅ 新增这一步：更新全局状态
+                login({
+                    _id: data._id,
+                    name: data.name,
+                    email: data.email,
+                    token: data.token
+                });
+            }
+
+            router.replace("/(tabs)");
+
+        } catch (error: any) {
+            // ... 错误处理 ...
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -29,36 +65,10 @@ export default function SignUp() {
             <ScrollView showsVerticalScrollIndicator={false}>
                 {/* 顶部绿色 Header */}
                 <View className="bg-primary pt-16 pb-10 px-6 rounded-b-[30px] shadow-sm">
-                    {/* 装饰图标：苹果 (绝对定位) */}
-                    <MaterialCommunityIcons
-                        name="food-apple-outline"
-                        size={80}
-                        color="white"
-                        style={{
-                            position: 'absolute',
-                            top: 50,
-                            left: 20,
-                            opacity: 0.2, // 透明度，制造水印效果
-                            transform: [{ rotate: '-15deg' }]
-                        }}
-                    />
-
-                    {/* 装饰图标：萝卜 (绝对定位) */}
-                    <MaterialCommunityIcons
-                        name="carrot"
-                        size={80}
-                        color="white"
-                        style={{
-                            position: 'absolute',
-                            top: 40,
-                            right: 10,
-                            opacity: 0.2, // 透明度
-                            transform: [{ rotate: '15deg' }]
-                        }}
-                    />
+                    <MaterialCommunityIcons name="leaf" size={140} color="white" style={{ position: 'absolute', right: -30, bottom: -20, opacity: 0.1, transform: [{ rotate: '-15deg' }] }} />
+                    <MaterialCommunityIcons name="food-apple" size={100} color="white" style={{ position: 'absolute', left: -20, top: 20, opacity: 0.1, transform: [{ rotate: '15deg' }] }} />
 
                     <View className="flex-row items-center justify-center mb-2">
-                        {/* 这里可以放你的 Logo 图片，暂时用图标代替 */}
                         <Ionicons name="leaf-outline" size={32} color="white" style={{ marginRight: 8 }} />
                         <Text className="text-white text-2xl font-pbold">Join EcoCart</Text>
                     </View>
@@ -138,12 +148,17 @@ export default function SignUp() {
                         </Text>
                     </View>
 
-                    {/* Sign Up Button */}
+                    {/* Sign Up Button (带 Loading 效果) */}
                     <TouchableOpacity
-                        className="bg-secondary rounded-2xl py-4 shadow-md shadow-secondary-light"
+                        className={`rounded-2xl py-4 shadow-md shadow-secondary-light flex-row justify-center items-center ${loading ? 'bg-green-300' : 'bg-secondary'}`}
                         onPress={handleSignUp}
+                        disabled={loading} // 加载时禁止点击
                     >
-                        <Text className="text-white text-center font-pbold text-lg">Get Started</Text>
+                        {loading ? (
+                            <ActivityIndicator color="white" />
+                        ) : (
+                            <Text className="text-white text-center font-pbold text-lg">Get Started</Text>
+                        )}
                     </TouchableOpacity>
 
                     {/* Divider */}
