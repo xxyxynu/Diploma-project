@@ -47,5 +47,13 @@ export const shoppingApi = {
     ignoreDuplicate: async (id: string) => {
         const response = await apiClient.put<ShoppingItem>(`/shopping/${id}/ignore-duplicate`);
         return response.data;
+    },
+
+    // 🆕 一键入库
+    moveToFridge: async (fridgeId: string) => {
+        const response = await apiClient.post<{ message: string, movedCount: number }>("/shopping/move-to-fridge", {
+            fridgeId
+        });
+        return response.data;
     }
 };
