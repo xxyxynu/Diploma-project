@@ -24,6 +24,7 @@ export interface UserInfo {
     token: string;
     ecoPoints?: number;
     dietaryPreferences?: string[];
+    city?: string;
     pointsHistory?: PointHistoryItem[];
     efficiencyStats?: EfficiencyStats;
 }
@@ -39,7 +40,7 @@ interface UserState {
     updateName: (name: string) => void;
     refreshUser: () => Promise<void>; // 🆕 刷新用户信息
     updatePreferences: (prefs: string[]) => void;
-
+    updateCity: (city: string) => void;
 }
 
 export const useUserStore = create<UserState>()(
@@ -78,6 +79,10 @@ export const useUserStore = create<UserState>()(
             updatePreferences: (prefs) =>
                 set((state) => ({
                     userInfo: state.userInfo ? { ...state.userInfo, dietaryPreferences: prefs } : null
+                })),
+            updateCity: (city) =>
+                set((state) => ({
+                    userInfo: state.userInfo ? { ...state.userInfo, city } : null
                 })),
         }),
         {

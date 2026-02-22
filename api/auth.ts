@@ -53,7 +53,7 @@ export const authApi = {
         return response.data;
     },
 
-    updateProfile: async (data: { dietaryPreferences: string[] }) => {
+    updateProfile: async (data: { dietaryPreferences?: string[], city?: string }) => {
         const response = await apiClient.put<UserInfo>("/auth/profile", data);
         return response.data;
     }
