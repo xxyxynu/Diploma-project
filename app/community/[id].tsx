@@ -15,7 +15,7 @@ import {
     TouchableOpacity,
     View
 } from "react-native";
-import MapView, { Circle, Marker } from "react-native-maps"; // 📦 New Import
+import MapView, { Circle, Marker } from "react-native-maps";
 import { communityApi, CommunityPost } from "../../api/community";
 import { useUserStore } from "../../store/userStore";
 
@@ -60,7 +60,7 @@ export default function CommunityDetail() {
         });
     };
 
-    // 🆕 Reservation Logic
+    //Reservation Logic
     const handleReserve = async () => {
         Alert.alert("Reserve Item", "Notify the owner that you want to pick this up?", [
             { text: "Cancel", style: "cancel" },
@@ -121,7 +121,7 @@ export default function CommunityDetail() {
 
         const { latitude, longitude } = coords;
 
-        // ⚠️ 关键点：2GIS 深度链接通常期望顺序是 [longitude, latitude] (经度, 纬度)
+        // 关键点：2GIS 深度链接通常期望顺序是 [longitude, latitude] (经度, 纬度)
         // 格式：dgis://2gis.ru/geo/{lon},{lat}
         const appUrl = `dgis://2gis.ru/geo/${longitude},${latitude}`;
 
@@ -196,7 +196,7 @@ export default function CommunityDetail() {
                         </View>
                     </View>
 
-                    {/* 🗺️ Location Map Section (可点击跳转) */}
+                    {/*Location Map Section (可点击跳转) */}
                     <Text className="text-slate-900 font-pbold text-lg mb-3">Location</Text>
 
                     {/* 把地图包在 TouchableOpacity 里，点击直接触发导航 */}
@@ -306,7 +306,7 @@ export default function CommunityDetail() {
                     </View>
                 ) : (
                     <View className="flex-row gap-3">
-                        {/* 🆕 Request / Reserve Button */}
+                        {/*Request / Reserve Button */}
                         {post.status === 'available' ? (
                             <TouchableOpacity
                                 onPress={handleReserve}

@@ -1,10 +1,10 @@
+import { useUserStore } from "@/store/userStore";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
-    Image,
     RefreshControl,
     ScrollView,
     Text,
@@ -12,11 +12,10 @@ import {
     View
 } from "react-native";
 import { foodApi, FridgeItem } from "../../api/food";
-import { recipeApi, Recipe } from "../../api/recipe"; // 🆕 引入 Recipe API
-import { RecipeModal } from "../../components/RecipeModal"; // 🆕 引入 Modal
-import { useFridgeStore } from "../../store/fridgeStore";
+import { Recipe, recipeApi } from "../../api/recipe"; // 引入 Recipe API
 import { ExpiringItemCard } from "../../components/ExpiringItemCard";
-import { useUserStore } from "@/store/userStore";
+import { RecipeModal } from "../../components/RecipeModal"; // 引入 Modal
+import { useFridgeStore } from "../../store/fridgeStore";
 
 export default function Expiring() {
     const router = useRouter();
@@ -36,6 +35,7 @@ export default function Expiring() {
     const [generatedRecipes, setGeneratedRecipes] = useState<Recipe[]>([]);
 
     const { userInfo } = useUserStore();
+    const { refreshUser } = useUserStore();
 
     useEffect(() => {
         if (selectedFridge) {
@@ -72,7 +72,6 @@ export default function Expiring() {
     };
 
     // --- Actions ---
-
     const handleDeleteItem = async (itemId: string, itemName: string) => {
         Alert.alert(
             "Remove Item",
@@ -80,12 +79,19 @@ export default function Expiring() {
             [
                 { text: "Cancel", style: "cancel" },
                 {
-                    text: "Remove",
+                    text: "Remove (Wasted)", // 这里的文案可以暗示这是浪费
                     style: "destructive",
                     onPress: async () => {
                         try {
-                            await foodApi.delete(itemId);
-                            fetchData(); // 刷新列表
+                            // ❌ 旧代码: await foodApi.delete(itemId);
+                            // ✅ 新代码: 调用 waste
+                            await foodApi.waste(itemId);
+
+                            // 刷新列表 & 刷新用户积分数据
+                            fetchData();
+                            refreshUser();
+
+                            Alert.alert("Item Removed", "Try to consume it next time! 🌱");
                         } catch (error) {
                             Alert.alert("Error", "Failed to delete item");
                         }
@@ -95,6 +101,7 @@ export default function Expiring() {
         );
     };
 
+    // 2. 修改消耗逻辑 (吃掉)
     const handleMarkConsumed = async (itemId: string, itemName: string) => {
         Alert.alert(
             "Mark as Consumed",
@@ -105,9 +112,15 @@ export default function Expiring() {
                     text: "Yes, Consumed",
                     onPress: async () => {
                         try {
-                            await foodApi.delete(itemId);
-                            Alert.alert("Great Job! 🎉", "You prevented food waste!");
+                            // ❌ 旧代码: await foodApi.delete(itemId);
+                            // ✅ 新代码: 调用 consume
+                            const res = await foodApi.consume(itemId);
+
+                            // 刷新列表 & 刷新用户积分数据
                             fetchData();
+                            refreshUser();
+
+                            Alert.alert("Great Job! 🎉", `You earned +10 Eco Points! Total: ${res.ecoPoints}`);
                         } catch (error) {
                             Alert.alert("Error", "Failed to update item");
                         }
@@ -125,7 +138,7 @@ export default function Expiring() {
         );
     };
 
-    // 🍳 Generate Recipe Logic
+    //Generate Recipe Logic
     const handleGenerateRecipe = async () => {
         if (selectedItems.length === 0) {
             Alert.alert("No Items Selected", "Please select items to generate a recipe.");

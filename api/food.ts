@@ -13,6 +13,7 @@ export interface FridgeItem {
     expiryDate: Date;
     quantity: number;
     unit: string;
+    price: number;
     category: 'Dairy' | 'Fruit' | 'Vegetables' | 'Meat' | 'Beverages' | 'Snacks' | 'Other';
     status: 'fresh' | 'expiring' | 'expired';
     notes?: string;
@@ -38,7 +39,7 @@ export interface ItemStats {
 }
 
 export interface CreateItemData {
-    fridgeId: string;  // 🆕 REQUIRED
+    fridgeId: string;
     name: string;
     barcode?: string;
     brand?: string;
@@ -47,6 +48,7 @@ export interface CreateItemData {
     expiryDate: Date;
     quantity?: number;
     unit?: string;
+    price?: number;
     category?: string;
     notes?: string;
 }
@@ -103,6 +105,16 @@ export const foodApi = {
     // Delete item
     delete: async (id: string) => {
         const response = await apiClient.delete(`/items/${id}`);
+        return response.data;
+    },
+
+    consume: async (id: string) => {
+        const response = await apiClient.post<{ ecoPoints: number }>(`/items/${id}/consume`);
+        return response.data;
+    },
+
+    waste: async (id: string) => {
+        const response = await apiClient.post(`/items/${id}/waste`);
         return response.data;
     }
 };

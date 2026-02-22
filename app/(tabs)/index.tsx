@@ -1,21 +1,21 @@
+import { notificationApi } from "@/api/notification";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { useRouter, useFocusEffect } from "expo-router";
-import React, { useEffect, useState, useCallback } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Alert, RefreshControl, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { foodApi, FridgeItem, ItemStats } from "../../api/food";
-import { useUserStore } from "../../store/userStore";
-import { useFridgeStore } from "../../store/fridgeStore"; // 🆕 NEW
-import { useFridgeInit } from "../../hooks/useFridgeInit"; // 🆕 NEW
-import { FridgeSwitcherButton } from "../../components/FridgeSwitcher"; // 🆕 NEW
-import { FoodItemCard } from "../../components/FoodItemCard";
 import { CategoryIcon } from "../../components/CategoryIcon";
-import { notificationApi } from "@/api/notification";
+import { FoodItemCard } from "../../components/FoodItemCard";
+import { FridgeSwitcherButton } from "../../components/FridgeSwitcher";
+import { useFridgeInit } from "../../hooks/useFridgeInit";
+import { useFridgeStore } from "../../store/fridgeStore";
+import { useUserStore } from "../../store/userStore";
 
 export default function Home() {
   const router = useRouter();
   const { userInfo } = useUserStore();
-  const { selectedFridge } = useFridgeStore(); // 🆕 Get selected fridge
-  const { loadFridges } = useFridgeInit(); // 🆕 Initialize fridges
+  const { selectedFridge } = useFridgeStore(); //Get selected fridge
+  const { loadFridges } = useFridgeInit(); // Initialize fridges
 
   // State
   const [stats, setStats] = useState<ItemStats>({ total: 0, fresh: 0, expiring: 0, expired: 0 });
@@ -30,7 +30,7 @@ export default function Home() {
     if (selectedFridge) {
       fetchData();
     }
-  }, [selectedFridge]); // 🆕 Refetch when fridge changes
+  }, [selectedFridge]); //Refetch when fridge changes
 
   useFocusEffect(
     useCallback(() => {
@@ -57,7 +57,7 @@ export default function Home() {
     }
 
     try {
-      // 🆕 Pass fridgeId to all API calls
+      //Pass fridgeId to all API calls
       const [statsData, categoryData] = await Promise.all([
         foodApi.getStats(selectedFridge._id),
         foodApi.getByCategory(selectedFridge._id)
@@ -104,7 +104,7 @@ export default function Home() {
     );
   };
 
-  // 🆕 Show loading or no fridge message
+  // Show loading or no fridge message
   if (loading) {
     return (
       <View className="flex-1 bg-[#F8F9FA] items-center justify-center">
@@ -164,7 +164,7 @@ export default function Home() {
           </TouchableOpacity>
         </View>
 
-        {/* 🆕 Fridge Switcher Button */}
+        {/* Fridge Switcher Button */}
         <View className="mb-3">
           <FridgeSwitcherButton />
         </View>

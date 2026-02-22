@@ -1,7 +1,8 @@
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { DatePickerField, FormField } from "@/components/HelperForm";
+import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker'; // 📦 引入图片选择器
-import { useRouter, useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
     ActivityIndicator,
@@ -10,13 +11,11 @@ import {
     Platform,
     ScrollView,
     Text,
-    TextInput,
     TouchableOpacity,
     View
 } from "react-native";
 import { foodApi } from "../api/food";
 import { useFridgeStore } from "../store/fridgeStore";
-import { FormField, DatePickerField } from "@/components/HelperForm";
 export default function AddManual() {
     const router = useRouter();
     const params = useLocalSearchParams();
@@ -36,6 +35,7 @@ export default function AddManual() {
         category: (params.suggestedCategory as string) || (params.category as string) || 'Other',
         quantity: params.quantity ? String(params.quantity) : '1',
         unit: (params.unit as string) || 'piece',
+        price: params.price ? String(params.price) : '',
         // 日期字符串转对象
         productionDate: params.productionDate ? new Date(params.productionDate as string) : null as Date | null,
         expiryDate: params.expiryDate ? new Date(params.expiryDate as string) : null as Date | null,
@@ -96,6 +96,7 @@ export default function AddManual() {
                 brand: formData.brand,
                 quantity: parseInt(formData.quantity) || 1,
                 unit: formData.unit,
+                price: formData.price ? parseInt(formData.price) : 0,
                 category: formData.category,
                 productionDate: formData.productionDate || undefined,
                 expiryDate: formData.expiryDate!,
@@ -208,28 +209,26 @@ export default function AddManual() {
                     ))}
                 </ScrollView>
 
-                {/* Quantity & Unit */}
-                <View className="flex-row gap-4">
+                {/* Quantity / Unit / Price Row */}
+                <View className="flex-row gap-4 mb-4">
+                    <View className="flex-1">
+                        <FormField label="Qty" value={formData.quantity} keyboardType="numeric" onChangeText={t => setFormData(p => ({ ...p, quantity: t.replace(/[^0-9]/g, '') }))} />
+                    </View>
+                    <View className="flex-1">
+                        <FormField label="Unit" value={formData.unit} onChangeText={t => setFormData(p => ({ ...p, unit: t }))} />
+                    </View>
+                    {/* 🆕 价格输入框 */}
                     <View className="flex-1">
                         <FormField
-                            label="Quantity"
-                            value={formData.quantity}
-                            onChangeText={(t: string) => {
-                                const numericValue = t.replace(/[^0-9]/g, '');
-                                setFormData(p => ({ ...p, quantity: numericValue }));
-                            }}
+                            label="Price (₸)"
+                            value={formData.price}
                             keyboardType="numeric"
-                        />
-                    </View>
-                    <View className="flex-[2]">
-                        <FormField
-                            label="Unit"
-                            value={formData.unit}
-                            onChangeText={(t: string) => setFormData(p => ({ ...p, unit: t }))}
-                            placeholder="piece, kg, L"
+                            placeholder="0"
+                            onChangeText={(t: string) => setFormData(p => ({ ...p, price: t.replace(/[^0-9]/g, '') }))}
                         />
                     </View>
                 </View>
+
 
                 <DatePickerField
                     label="Production Date"

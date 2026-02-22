@@ -15,8 +15,8 @@ import {
 } from "react-native";
 import { communityApi } from "../../api/community";
 import { foodApi, FridgeItem } from "../../api/food";
+import { LocationPicker } from "../../components/LocationPicker";
 import { useFridgeStore } from "../../store/fridgeStore";
-import { LocationPicker } from "../../components/LocationPicker"; // 🆕 Import
 
 const TAGS = ['Fruit', 'Vegetables', 'Bakery', 'Canned', 'Cooked', 'Other'];
 
@@ -35,7 +35,7 @@ export default function CreateShare() {
     const [selectedTag, setSelectedTag] = useState("Other");
     const [imageBase64, setImageBase64] = useState<string | null>(null);
 
-    // 🆕 Location Data
+    // Location Data
     const [showLocationPicker, setShowLocationPicker] = useState(false);
     const [locationData, setLocationData] = useState<{
         city: string;
@@ -109,7 +109,7 @@ export default function CreateShare() {
             return;
         }
 
-        // 🆕 Validate location
+        // Validate location
         if (!locationData) {
             Alert.alert("Missing Location", "Please select a pickup location");
             return;
@@ -205,7 +205,7 @@ export default function CreateShare() {
                 <Input label="Title" value={name} onChangeText={setName} />
                 <Input label="Description" value={desc} onChangeText={setDesc} multiline />
 
-                {/* 🆕 Location Picker Button */}
+                {/* Location Picker Button */}
                 <Text className="text-gray-700 font-pmedium mb-2">Pickup Location *</Text>
                 <TouchableOpacity
                     onPress={() => setShowLocationPicker(true)}
@@ -275,7 +275,7 @@ export default function CreateShare() {
                 </TouchableOpacity>
             </ScrollView>
 
-            {/* 🆕 Location Picker Modal */}
+            {/* Location Picker Modal */}
             <LocationPicker
                 visible={showLocationPicker}
                 onClose={() => setShowLocationPicker(false)}

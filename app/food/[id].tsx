@@ -1,3 +1,5 @@
+import { DetailBox } from "@/components/DetailBox";
+import { useUserStore } from "@/store/userStore";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -13,7 +15,6 @@ import {
     View
 } from "react-native";
 import { foodApi, FridgeItem } from "../../api/food";
-import { DetailBox } from "@/components/DetailBox";
 
 const { width } = Dimensions.get("window");
 
@@ -23,6 +24,7 @@ export default function FoodDetail() {
 
     const [item, setItem] = useState<FridgeItem | null>(null);
     const [loading, setLoading] = useState(true);
+    const { refreshUser } = useUserStore();
 
     useEffect(() => {
         if (id) fetchDetail();
@@ -48,8 +50,12 @@ export default function FoodDetail() {
                 text: "Yes, It was delicious!",
                 onPress: async () => {
                     try {
-                        await foodApi.delete(id as string);
-                        router.replace("/(tabs)/fridge"); // 回到列表
+                        // ✅ 改为 consume
+                        await foodApi.consume(id as string);
+                        refreshUser(); // 刷新积分
+
+                        Alert.alert("Awesome!", "+10 Eco Points Added!");
+                        router.replace("/(tabs)/fridge");
                     } catch (error) {
                         Alert.alert("Error", "Action failed.");
                     }
@@ -58,23 +64,30 @@ export default function FoodDetail() {
         ]);
     };
 
+    // 2. 删除 (浪费)
     const handleDelete = async () => {
-        Alert.alert("Delete Item", "This action cannot be undone.", [
+        Alert.alert("Delete Item", "Is this item wasted or just removed?", [
             { text: "Cancel", style: "cancel" },
             {
-                text: "Delete",
+                text: "Just Remove", // 普通删除 (误操作录入时)
+                onPress: async () => {
+                    await foodApi.delete(id as string);
+                    router.back();
+                }
+            },
+            {
+                text: "Wasted (Expired)", // 浪费
                 style: "destructive",
                 onPress: async () => {
-                    try {
-                        await foodApi.delete(id as string);
-                        router.back();
-                    } catch (error) {
-                        Alert.alert("Error", "Failed to delete.");
-                    }
+                    // ✅ 改为 waste
+                    await foodApi.waste(id as string);
+                    refreshUser(); // 刷新数据
+                    router.back();
                 }
             }
         ]);
     };
+
 
     const handleEdit = () => {
         if (!item) return;

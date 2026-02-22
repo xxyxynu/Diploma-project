@@ -1,4 +1,5 @@
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import * as Location from 'expo-location';
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -14,7 +15,6 @@ import {
 } from "react-native";
 import { communityApi, CommunityPost } from "../../api/community";
 import { useUserStore } from "../../store/userStore";
-import * as Location from 'expo-location';
 
 const CITIES = ['All', 'Almaty', 'Astana', 'Shymkent', 'Karaganda', 'Aktau', 'Atyrau', 'Other'];
 const CATEGORIES = ['All', 'Fruit', 'Vegetables', 'Bakery', 'Canned', 'Cooked', 'Other'];
@@ -112,7 +112,7 @@ export default function CommunityFeed() {
             result = result.filter(p => p.tags.includes(categoryFilter));
         }
 
-        // 2. 排序逻辑 (✨ 关键修改)
+        // 2. 排序逻辑
         result.sort((a, b) => {
             // A. 如果开启了 Nearby，且两者都有距离数据 -> 按距离排序 (近 -> 远)
             if (isNearby && a.distance !== undefined && b.distance !== undefined) {
@@ -274,7 +274,7 @@ export default function CommunityFeed() {
                                     <View className="flex-row items-center mt-1">
                                         <Ionicons name="location-sharp" size={12} color={isNearby ? "#16a34a" : "#9ca3af"} />
                                         <Text className="text-xs ml-1 text-gray-500 numberOfLines={1}">
-                                            {/* 🆕 如果是 Nearby 模式，高亮显示距离 */}
+                                            {/* 如果是 Nearby 模式，高亮显示距离 */}
                                             {item.distance
                                                 ? `${item.distance} km away`
                                                 : `${item.location?.city || 'Unknown'} • ${item.location?.district || ''}`

@@ -1,3 +1,6 @@
+import { FridgeSwitcherButton } from "@/components/FridgeSwitcher";
+import { useFridgeInit } from "@/hooks/useFridgeInit";
+import { useFridgeStore } from "@/store/fridgeStore";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -12,19 +15,16 @@ import {
     View
 } from "react-native";
 import { foodApi, FridgeItem } from "../../api/food";
-import { FoodItemCard } from "../../components/FoodItemCard";
-import { FilterChip } from "../../components/FilterChip";
 import { CategoryIcon } from "../../components/CategoryIcon";
-import { useFridgeStore } from "@/store/fridgeStore";
-import { useFridgeInit } from "@/hooks/useFridgeInit";
-import { FridgeSwitcherButton } from "@/components/FridgeSwitcher";
+import { FilterChip } from "../../components/FilterChip";
+import { FoodItemCard } from "../../components/FoodItemCard";
 
 type FilterType = 'all' | 'fresh' | 'expiring' | 'expired';
 
 export default function Fridge() {
     const router = useRouter();
-    const { selectedFridge } = useFridgeStore(); // 🆕 Get selected fridge
-    const { loadFridges } = useFridgeInit(); // 🆕 Initialize fridges
+    const { selectedFridge } = useFridgeStore(); // Get selected fridge
+    const { loadFridges } = useFridgeInit(); // Initialize fridges
 
     // State
     const [itemsByCategory, setItemsByCategory] = useState<Record<string, FridgeItem[]>>({});
@@ -126,7 +126,7 @@ export default function Fridge() {
     const totalItems = Object.values(filteredItems).reduce((sum, items) => sum + items.length, 0);
     const categories = Object.keys(filteredItems);
 
-    // 🆕 Show loading or no fridge message
+    //how loading or no fridge message
     if (loading) {
         return (
             <View className="flex-1 bg-[#F8F9FA] items-center justify-center">
@@ -173,7 +173,7 @@ export default function Fridge() {
                     </TouchableOpacity>
                 </View>
 
-                {/* 🆕 Fridge Switcher Button */}
+                {/* Fridge Switcher Button */}
                 <View className="mb-3">
                     <FridgeSwitcherButton />
                 </View>

@@ -1,4 +1,5 @@
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { CameraView, useCameraPermissions } from "expo-camera";
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from "expo-router";
@@ -11,11 +12,9 @@ import {
     Platform,
     ScrollView,
     Text,
-    TextInput,
     TouchableOpacity,
     View
 } from "react-native";
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { foodApi, ProductInfo } from "../../api/food";
 import { DatePickerField, FormField } from "../../components/HelperForm";
 import { useFridgeStore } from "../../store/fridgeStore";
@@ -286,7 +285,7 @@ export default function Scan() {
                             <View className="flex-1">
                                 <FormField
                                     label="Quantity"
-                                    value={formData.quantity} // 👈 2. 直接绑定字符串
+                                    value={formData.quantity} //2. 直接绑定字符串
                                     keyboardType="numeric"
                                     onChangeText={(t: string) =>
                                         setFormData(p => ({ ...p, quantity: t.replace(/[^0-9]/g, '') })) // 👈 允许空字符串

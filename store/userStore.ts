@@ -1,8 +1,21 @@
+import { authApi } from '@/api/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from "expo-secure-store";
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import * as SecureStore from "expo-secure-store";
-import { authApi } from '@/api/auth';
+
+export interface PointHistoryItem {
+    points: number;
+    reason: string;
+    date: string;
+}
+
+export interface EfficiencyStats {
+    itemsConsumed: number;
+    itemsWasted: number;
+    totalMoneySaved: number; // 🆕
+    totalCo2Saved: number;   // 🆕
+}
 
 export interface UserInfo {
     _id: string;
@@ -11,6 +24,8 @@ export interface UserInfo {
     token: string;
     ecoPoints?: number;
     dietaryPreferences?: string[];
+    pointsHistory?: PointHistoryItem[];
+    efficiencyStats?: EfficiencyStats;
 }
 
 // 2. 定义 Store 的状态和动作
