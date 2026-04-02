@@ -21,6 +21,13 @@ interface AuthResponse {
     token: string; // 我们最需要这个
 }
 
+export interface LeaderboardData {
+    city: string;
+    topUsers: { _id: string, name: string, ecoPoints: number }[];
+    myRank: number | string;
+    topPercentage: number;
+}
+
 export const authApi = {
     // 注册接口
     // 假设路由是 POST /api/users/register (请根据你的 routes 文件确认)
@@ -55,6 +62,11 @@ export const authApi = {
 
     updateProfile: async (data: { dietaryPreferences?: string[], city?: string }) => {
         const response = await apiClient.put<UserInfo>("/auth/profile", data);
+        return response.data;
+    },
+
+    getLeaderboard: async () => {
+        const response = await apiClient.get<LeaderboardData>("/auth/leaderboard");
         return response.data;
     }
 };

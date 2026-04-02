@@ -156,12 +156,12 @@ export default function FoodDetail() {
             <StatusBar barStyle="light-content" />
 
             <View className="relative">
-                <View className="w-full h-80 bg-gray-200">
+                <View className="w-full h-80 bg-white">
                     {item.imageUrl ? (
                         <Image
                             source={{ uri: item.imageUrl }}
                             className="w-full h-full"
-                            resizeMode="cover"
+                            resizeMode="contain"
                         />
                     ) : (
                         <View className={`w-full h-full items-center justify-center ${statusBg}`}>
@@ -175,14 +175,14 @@ export default function FoodDetail() {
                 <View className="absolute top-14 left-6 right-6 flex-row justify-between z-10">
                     <TouchableOpacity
                         onPress={() => router.back()}
-                        className="w-10 h-10 bg-white/30 backdrop-blur-md rounded-full items-center justify-center"
+                        className="w-10 h-10 bg-gray-200 backdrop-blur-md rounded-full items-center justify-center"
                     >
                         <Ionicons name="arrow-back" size={24} color="white" />
                     </TouchableOpacity>
 
                     <TouchableOpacity
                         onPress={handleEdit}
-                        className="w-10 h-10 bg-white/30 backdrop-blur-md rounded-full items-center justify-center"
+                        className="w-10 h-10 bg-gray-200 backdrop-blur-md rounded-full items-center justify-center"
                     >
                         <Ionicons name="pencil" size={20} color="white" />
                     </TouchableOpacity>

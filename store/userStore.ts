@@ -38,7 +38,7 @@ interface UserState {
     login: (user: UserInfo) => void;
     logout: () => void;
     updateName: (name: string) => void;
-    refreshUser: () => Promise<void>; // 🆕 刷新用户信息
+    refreshUser: () => Promise<void>; //刷新用户信息
     updatePreferences: (prefs: string[]) => void;
     updateCity: (city: string) => void;
 }

@@ -49,7 +49,15 @@ export const ImpactDashboard = ({ ecoPoints, history, efficiency }: Props) => {
         }
 
         // 取最近的 6 条记录 (或者按日期聚合，这里简化为取最后 6 次变化)
-        const recentHistory = history.slice(-6);
+        let recentHistory = history.slice(-6);
+
+        // 🛠️ 防崩溃 + 优化视觉：如果只有 1 条记录，手动补一个“起点”
+        if (recentHistory.length === 1) {
+            recentHistory = [
+                { points: 0, date: new Date(Date.now() - 86400000).toISOString() }, // 伪造一个昨天的0分起点
+                recentHistory[0]
+            ];
+        }
 
         const labels = recentHistory.map(h => {
             const date = new Date(h.date);
@@ -83,9 +91,9 @@ export const ImpactDashboard = ({ ecoPoints, history, efficiency }: Props) => {
 
     return (
         <View className="mx-6 mt-6">
-            <Text className="text-gray-400 font-pbold text-xs uppercase tracking-wider mb-3 ml-2">My Real Impact</Text>
+            <Text className="text-gray-400 font-pbold text-xs uppercase tracking-wider mb-3 ml-2">My Impact</Text>
 
-            <View className="bg-white rounded-[30px] p-5 shadow-sm border border-gray-100">
+            <View className="bg-white rounded-[30px] p-5">
 
                 {/* 1. 核心指标 */}
                 <View className="flex-row justify-between mb-6">

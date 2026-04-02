@@ -33,8 +33,9 @@ export default function Scan() {
         name: '',
         brand: '',
         category: 'Other',
-        quantity: '1', // 👈 1. 修改这里：默认是字符串 '1'
+        quantity: '1',
         unit: 'piece',
+        price: '',
         productionDate: null as Date | null,
         expiryDate: null as Date | null,
         notes: '',
@@ -54,7 +55,7 @@ export default function Scan() {
         }
     }, []);
 
-    // 📷 Local Modal Picker
+    // Local Modal Picker
     const pickImage = async () => {
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -70,7 +71,7 @@ export default function Scan() {
         }
     };
 
-    // 🔍 扫码逻辑
+    // 扫码逻辑
     const handleBarCodeScanned = async ({ data }: { data: string }) => {
         if (scanned || scanning) return;
 
@@ -88,10 +89,10 @@ export default function Scan() {
                 brand: info.brand,
                 category: info.suggestedCategory,
                 imageUrl: info.imageUrl,
-                quantity: '1' // 👈 确保这里也是字符串
+                quantity: '1'
             }));
 
-            // ✅ 扫码成功：打开 Modal
+            // 扫码成功：打开 Modal
             setShowProductModal(true);
 
         } catch (error: any) {
@@ -122,8 +123,9 @@ export default function Scan() {
             name: '',
             brand: '',
             category: 'Other',
-            quantity: '1', // 👈 重置为字符串 '1'
+            quantity: '1',
             unit: 'piece',
+            price: '',
             productionDate: null,
             expiryDate: null,
             notes: '',
@@ -158,7 +160,7 @@ export default function Scan() {
 
                 // 👇 3. 提交时转数字，如果为空则默认为 1
                 quantity: parseInt(formData.quantity) || 1,
-
+                price: formData.price ? parseInt(formData.price) : 0,
                 unit: formData.unit,
                 productionDate: formData.productionDate || undefined,
                 expiryDate: formData.expiryDate,
@@ -230,7 +232,7 @@ export default function Scan() {
                 <Text className="text-white/80 mt-8 font-medium">Scanning...</Text>
             </View>
 
-            {/* 👇 关键修改：手动录入按钮直接跳转 */}
+            {/* 手动录入按钮直接跳转 */}
             <View className="absolute bottom-20 w-full items-center">
                 <TouchableOpacity
                     onPress={() => router.push("/add-manual")}
@@ -281,19 +283,28 @@ export default function Scan() {
                         <FormField label="Name" value={formData.name} onChangeText={(t: string) => setFormData(p => ({ ...p, name: t }))} />
                         <FormField label="Brand" value={formData.brand} onChangeText={(t: string) => setFormData(p => ({ ...p, brand: t }))} />
 
-                        <View className="flex-row gap-4">
+                        <View className="flex-row gap-4 mb-4">
                             <View className="flex-1">
                                 <FormField
                                     label="Quantity"
                                     value={formData.quantity} //2. 直接绑定字符串
                                     keyboardType="numeric"
                                     onChangeText={(t: string) =>
-                                        setFormData(p => ({ ...p, quantity: t.replace(/[^0-9]/g, '') })) // 👈 允许空字符串
+                                        setFormData(p => ({ ...p, quantity: t.replace(/[^0-9]/g, '') })) //允许空字符串
                                     }
                                 />
                             </View>
                             <View className="flex-1">
                                 <FormField label="Unit" value={formData.unit} onChangeText={(t: string) => setFormData(p => ({ ...p, unit: t }))} />
+                            </View>
+                            <View className="flex-1">
+                                <FormField
+                                    label="Price (₸)"
+                                    value={formData.price}
+                                    keyboardType="numeric"
+                                    placeholder="0"
+                                    onChangeText={(t: string) => setFormData(p => ({ ...p, price: t.replace(/[^0-9]/g, '') }))}
+                                />
                             </View>
                         </View>
 

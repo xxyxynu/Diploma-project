@@ -189,7 +189,7 @@ export default function AddManual() {
                 {/* Category */}
                 <Text className="text-gray-700 font-pmedium mb-2">Category</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-4 flex-row">
-                    {['Dairy', 'Fruit', 'Vegetables', 'Meat', 'Beverages', 'Snacks', 'Other'].map(cat => (
+                    {['Dairy', 'Fruit', 'Vegetables', 'Meat', 'Grains', 'Beverages', 'Snacks', 'Seafood', 'Other'].map(cat => (
                         <TouchableOpacity
                             key={cat}
                             onPress={() => setFormData(p => ({ ...p, category: cat }))}
