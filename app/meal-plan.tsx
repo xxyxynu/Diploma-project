@@ -9,13 +9,15 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-    View
+    View,
+    StyleSheet, // For custom styles
+    Platform, // Import Platform to handle iOS/Android differences
+    KeyboardAvoidingView // Import KeyboardAvoidingView
 } from "react-native";
-import { mealPlanApi, MealPlan, DayPlan } from "../api/mealPlan";
+import { mealPlanApi, MealPlan, Meal } from "../api/mealPlan"; // Import Meal interface
 import { useFridgeStore } from "../store/fridgeStore";
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-const MEAL_TYPES = ['breakfast', 'lunch', 'dinner'] as const;
 
 export default function MealPlanner() {
     const router = useRouter();
@@ -33,6 +35,12 @@ export default function MealPlanner() {
     const [editModalVisible, setEditModalVisible] = useState(false);
     const [editingContext, setEditingContext] = useState<{ day: string, type: 'breakfast' | 'lunch' | 'dinner', currentName: string } | null>(null);
     const [editInputValue, setEditInputValue] = useState("");
+
+    // --- 详情模态框状态 ---
+    const [detailModalVisible, setDetailModalVisible] = useState(false);
+    const [selectedMealForDetail, setSelectedMealForDetail] = useState<Meal | null>(null);
+    const [detailMealType, setDetailMealType] = useState<'breakfast' | 'lunch' | 'dinner' | null>(null);
+
 
     useEffect(() => {
         if (!selectedFridge) {
@@ -153,9 +161,15 @@ export default function MealPlanner() {
             <TouchableOpacity
                 activeOpacity={0.8}
                 onPress={() => {
-                    setEditingContext({ day: activeDay, type, currentName: mealData?.recipeName || "" });
-                    setEditInputValue(mealData?.recipeName || "");
-                    setEditModalVisible(true);
+                    if (hasRecipe) { // 只有有菜谱才显示详情
+                        setSelectedMealForDetail(mealData);
+                        setDetailMealType(type);
+                        setDetailModalVisible(true);
+                    } else { // 否则进入编辑模式
+                        setEditingContext({ day: activeDay, type, currentName: mealData?.recipeName || "" });
+                        setEditInputValue(mealData?.recipeName || "");
+                        setEditModalVisible(true);
+                    }
                 }}
                 className={`bg-white rounded-3xl p-5 mb-4 shadow-sm'}`}
             >
@@ -323,7 +337,12 @@ export default function MealPlanner() {
 
             {/* --- 5. ✏️ Edit Modal --- */}
             <Modal visible={editModalVisible} transparent animationType="fade">
-                <View className="flex-1 bg-black/50 justify-end">
+                {/* KeyboardAvoidingView 包裹模态框内容 */}
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === "ios" ? "padding" : "height"}
+                    style={styles.keyboardAvoidingView}
+                    keyboardVerticalOffset={Platform.OS === "ios" ? 20 : 0} // 针对 iOS 调整偏移量，可根据实际情况微调
+                >
                     <View className="bg-white w-full rounded-t-[30px] p-6 pb-10">
                         <View className="flex-row justify-between items-center mb-6">
                             <Text className="text-xl font-pbold text-slate-800 capitalize">{editingContext?.type} Plan</Text>
@@ -346,7 +365,7 @@ export default function MealPlanner() {
                                 onPress={() => { handleClearMeal(); handleSaveEdit(); }} // 清空输入框并保存
                                 className="flex-1 py-4 bg-red-50 border border-red-100 rounded-2xl items-center"
                             >
-                                <Text className="text-red-600 font-bold">Clear Meal</Text>
+                                <Text className="text-red-600 text-lg font-bold">Clear</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 onPress={handleSaveEdit}
@@ -356,6 +375,64 @@ export default function MealPlanner() {
                             </TouchableOpacity>
                         </View>
                     </View>
+                </KeyboardAvoidingView>
+            </Modal>
+
+            {/* --- 6. 🍲 Meal Detail Modal --- */}
+            <Modal visible={detailModalVisible} transparent animationType="slide">
+                <View style={styles.modalOverlay}>
+                    <View style={styles.detailModalContainer}>
+                        <View className="flex-row justify-between items-center mb-6">
+                            <Text className="text-xl font-pbold text-slate-800 capitalize">{detailMealType}</Text>
+                            <TouchableOpacity onPress={() => setDetailModalVisible(false)}>
+                                <Ionicons name="close" size={28} color="#64748b" />
+                            </TouchableOpacity>
+                        </View>
+
+                        {selectedMealForDetail && (
+                            <ScrollView showsVerticalScrollIndicator={false}>
+                                <Text className="text-2xl font-pbold text-slate-800 mb-4">{selectedMealForDetail.recipeName}</Text>
+
+                                {selectedMealForDetail.isAiGenerated && (
+                                    <View className="bg-purple-50 px-3 py-1.5 rounded-xl flex-row items-center self-start mb-4">
+                                        <MaterialCommunityIcons name="robot-outline" size={16} color="#9333EA" />
+                                        <Text className="text-purple-700 text-sm font-bold ml-2">AI-Generated</Text>
+                                    </View>
+                                )}
+
+                                {selectedMealForDetail.ingredients.length > 0 && (
+                                    <View className="mb-6">
+                                        <Text className="text-lg font-pbold text-gray-700 mb-3">Ingredients</Text>
+                                        {selectedMealForDetail.ingredients.map((ingredient, index) => (
+                                            <View key={index} className="flex-row items-center mb-2">
+                                                <View className="w-2 h-2 bg-emerald-500 rounded-full mr-2" />
+                                                <Text className="text-base text-gray-700">{ingredient}</Text>
+                                            </View>
+                                        ))}
+                                    </View>
+                                )}
+
+                                {/* TODO: If you fetch full recipe details (e.g., instructions) from another API or store them, display them here */}
+                                <Text className="text-base text-gray-500 italic mt-4">
+                                    Full instructions for this recipe are not available in the current plan.
+                                    You can search for "{selectedMealForDetail.recipeName}" online!
+                                </Text>
+                            </ScrollView>
+                        )}
+                        <TouchableOpacity
+                            onPress={() => {
+                                setDetailModalVisible(false);
+                                if (selectedMealForDetail) {
+                                    setEditingContext({ day: activeDay, type: detailMealType!, currentName: selectedMealForDetail.recipeName });
+                                    setEditInputValue(selectedMealForDetail.recipeName);
+                                    setEditModalVisible(true);
+                                }
+                            }}
+                            className="mt-6 py-4 bg-blue-500 rounded-2xl items-center shadow-md shadow-blue-200"
+                        >
+                            <Text className="text-white font-pbold text-lg">Edit Meal</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
             </Modal>
         </View>
@@ -364,3 +441,24 @@ export default function MealPlanner() {
 
 // 定义常量解决顶部作用域问题
 const MEALS: ('breakfast' | 'lunch' | 'dinner')[] = ['breakfast', 'lunch', 'dinner'];
+
+const styles = StyleSheet.create({
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'flex-end',
+    },
+    detailModalContainer: {
+        backgroundColor: 'white',
+        width: '100%',
+        height: '75%', // Make it take up 75% of the screen height
+        borderTopLeftRadius: 30,
+        borderTopRightRadius: 30,
+        padding: 24,
+        paddingBottom: 40,
+    },
+    keyboardAvoidingView: {
+        flex: 1, // 确保 KeyboardAvoidingView 占据整个屏幕
+        justifyContent: 'flex-end', // 让其内容保持在底部
+    },
+});

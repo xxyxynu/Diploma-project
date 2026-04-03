@@ -317,7 +317,7 @@ const ShoppingItemCard = ({ item, onToggle, onDelete, onIgnoreDuplicate }: Shopp
 
     return (
         <View className="mb-3">
-            <View className={`bg-white rounded-2xl p-4 border shadow-sm ${hasDuplicates ? 'border-amber-300 bg-amber-50' : 'border-gray-100'} ${item.isCompleted ? 'opacity-50 bg-gray-50' : ''}`}>
+            <View className={`bg-white rounded-2xl p-4 ${hasDuplicates ? 'border-amber-300 bg-amber-50' : 'border-gray-100'} ${item.isCompleted ? 'opacity-50 bg-gray-50' : ''}`}>
                 <View className="flex-row items-center">
                     <TouchableOpacity
                         onPress={onToggle}
