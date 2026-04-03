@@ -153,11 +153,18 @@ export default function CreateShare() {
 
     return (
         <View className="flex-1 bg-white">
-            <View className="bg-purple-500 pt-14 pb-6 px-6 rounded-b-[30px]">
-                <View className="flex-row items-center justify-between">
-                    <TouchableOpacity onPress={() => router.back()}>
-                        <Ionicons name="arrow-back" size={28} color="white" />
+            <View className="bg-purple-600 pt-16 pb-8 px-6 rounded-b-[35px] shadow-xl shadow-purple-100 relative overflow-hidden">
+                {/* 装饰背景圆圈 */}
+                <View className="absolute -top-10 -right-10 w-32 h-32 bg-white/10 rounded-full" />
+
+                <View className="flex-row justify-between items-center">
+                    <TouchableOpacity
+                        onPress={() => router.back()}
+                        className="bg-white/20 p-2.5 rounded-2xl backdrop-blur-md border border-white/30"
+                    >
+                        <Ionicons name="chevron-back" size={24} color="white" />
                     </TouchableOpacity>
+
                     <Text className="text-white text-xl font-pbold">Share Food</Text>
                     <View style={{ width: 28 }} />
                 </View>

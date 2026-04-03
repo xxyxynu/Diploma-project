@@ -62,6 +62,10 @@ export default function RootLayout() {
         name="meal-plan/index"
         options={{ headerShown: false }}
       />
+      <Stack.Screen
+        name="receipt-review"
+        options={{ title: "Receipt Review", presentation: "modal" }}
+      />
     </Stack>
   );
 }

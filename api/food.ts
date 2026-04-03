@@ -53,6 +53,16 @@ export interface CreateItemData {
     notes?: string;
 }
 
+export interface ScannedItem {
+    name: string;
+    quantity: number;
+    unit: string;
+    category: string;
+    price?: number;
+    // 供前端用的临时状态
+    selected?: boolean;
+}
+
 export const foodApi = {
     // Get all items (requires fridgeId)
     getAll: async (fridgeId: string) => {
@@ -115,6 +125,26 @@ export const foodApi = {
 
     waste: async (id: string) => {
         const response = await apiClient.post(`/items/${id}/waste`);
+        return response.data;
+    },
+
+    scanReceipt: async (base64Image: string) => {
+        const response = await apiClient.post<{ items: ScannedItem[] }>("/items/scan-receipt", {
+            imageBase64: base64Image
+        });
+        return response.data;
+    },
+
+    batchCreate: async (items: CreateItemData[]) => {
+        const promises = items.map(item => apiClient.post("/items", item));
+        await Promise.all(promises);
+    },
+
+    createMany: async (fridgeId: string, items: Partial<CreateItemData>[]) => {
+        const response = await apiClient.post<{ message: string; count: number }>(
+            "/items/batch",
+            { fridgeId, items }
+        );
         return response.data;
     }
 };

@@ -1,5 +1,6 @@
 import { notificationApi } from "@/api/notification";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import * as ImagePicker from 'expo-image-picker';
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Alert, RefreshControl, ScrollView, Text, TouchableOpacity, View } from "react-native";
@@ -104,6 +105,43 @@ export default function Home() {
     );
   };
 
+  const handleScanReceipt = async () => {
+    if (!selectedFridge) {
+      Alert.alert("Error", "Please select a fridge first.");
+      return;
+    }
+
+    try {
+      // 请求权限
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert("Permission Denied", "Camera access is required.");
+        return;
+      }
+
+      // 打开相机 (或者从相册选，看你需求)
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.1, // 极限压缩
+        allowsEditing: true, // 允许裁剪小票
+        aspect: [3, 4],
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets[0].base64) {
+        const base64Img = `data:image/jpeg;base64,${result.assets[0].base64}`;
+
+        // 🚀 核心跳转：带上图片去审核页
+        router.push({
+          pathname: "/receipt-review",
+          params: { base64: base64Img }
+        });
+      }
+    } catch (error) {
+      Alert.alert("Error", "Failed to open camera");
+    }
+  };
+
   // Show loading or no fridge message
   if (loading) {
     return (
@@ -195,33 +233,62 @@ export default function Home() {
         }
       >
 
-        {/* Quick Actions */}
-        <View className="px-6 mt-6">
-          <Text className="text-lg font-bold text-gray-800 mb-3">Quick Actions</Text>
-          <View className="flex-row justify-between gap-4">
+        {/* Quick Actions - 现代重构版 */}
+        <View className="px-6 mt-8">
+          <View className="flex-row justify-between items-end mb-4">
+            <View>
+              <Text className="text-2xl font-pbold text-slate-800">Quick Actions</Text>
+              <Text className="text-gray-400 text-xs font-pmedium">Manage your kitchen efficiently</Text>
+            </View>
+          </View>
+
+          <View className="flex-row gap-3 h-40">
+            {/* 1. Shopping List - 大卡片 (强调核心功能) */}
             <TouchableOpacity
               onPress={() => router.push("/shopping-list")}
-              className="flex-1 bg-blue-50 p-5 rounded-[24px] items-center justify-center h-28 border border-blue-100"
+              activeOpacity={0.7}
+              className="flex-[1.2] bg-blue-500 rounded-[32px] p-5 justify-between shadow-lg shadow-blue-200"
             >
-              <View className="bg-white p-2 rounded-full mb-2">
-                <Ionicons name="list" size={24} color="#3B82F6" />
+              <View className="bg-white/20 w-10 h-10 rounded-2xl items-center justify-center">
+                <Ionicons name="cart" size={22} color="white" />
               </View>
-              <Text className="text-blue-500 font-bold">Shopping List</Text>
+              <View>
+                <Text className="text-white font-pbold text-lg">Shopping</Text>
+                <Text className="text-blue-100 text-[10px] font-pmedium">Sync with fridge</Text>
+              </View>
             </TouchableOpacity>
 
-            {/* Button 2: Share Food (Community) */}
-            <TouchableOpacity
-              onPress={() => router.push("/community")} // 跳转到社区主页
-              className="flex-1 bg-purple-50 p-5 rounded-[24px] items-center justify-center h-28 border border-purple-100"
-            >
-              <View className="bg-white p-2 rounded-full mb-2">
-                <MaterialCommunityIcons name="hand-heart" size={24} color="#A855F7" />
-              </View>
-              <Text className="text-purple-500 font-bold">Share Food</Text>
-            </TouchableOpacity>
+            {/* 右侧两个垂直排列的小卡片 */}
+            <View className="flex-1 gap-3">
+              {/* 2. Share Food */}
+              <TouchableOpacity
+                onPress={() => router.push("/community")}
+                activeOpacity={0.7}
+                className="flex-1 bg-purple-100 rounded-[24px] p-4 flex-row items-center shadow-sm shadow-purple-100"
+              >
+                <View className="bg-white p-2 rounded-xl mr-3">
+                  <MaterialCommunityIcons name="hand-heart" size={18} color="#A855F7" />
+                </View>
+                <Text className="text-purple-700 font-pbold text-xs">Share</Text>
+              </TouchableOpacity>
+
+              {/* 3. Scan Receipt */}
+              <TouchableOpacity
+                onPress={handleScanReceipt}
+                activeOpacity={0.7}
+                className="flex-1 bg-amber-100 rounded-[24px] p-4 flex-row items-center shadow-sm shadow-amber-100"
+              >
+                <View className="bg-white p-2 rounded-xl mr-3">
+                  <Ionicons name="receipt" size={18} color="#D97706" />
+                </View>
+                <Text className="text-amber-700 font-pbold text-xs">OCR</Text>
+                <View className="absolute -top-2 -right-1 bg-red-500 px-2 py-0.5 rounded-full">
+                  <Text className="text-white text-[8px] font-pbold">FAST</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
-
         {/* Empty State */}
         {stats.total === 0 && (
           <View className="px-6 mt-12 items-center">

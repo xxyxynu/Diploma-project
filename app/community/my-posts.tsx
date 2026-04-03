@@ -27,8 +27,6 @@ export default function MyPosts() {
 
     const fetchMyPosts = async () => {
         try {
-            // 这里我们获取所有，然后在前端筛选 "我的"
-            // (如果后端支持 /community/mine 接口会更好，但前端筛选也够用)
             const allPosts = await communityApi.getAll();
             const myPosts = allPosts.filter(p => p.postedBy._id === userInfo?._id);
             setPosts(myPosts);
@@ -46,7 +44,7 @@ export default function MyPosts() {
             {
                 text: "Yes", onPress: async () => {
                     await communityApi.updateStatus(id, 'taken');
-                    fetchMyPosts(); // 刷新列表
+                    fetchMyPosts();
                 }
             }
         ]);
@@ -58,7 +56,7 @@ export default function MyPosts() {
             {
                 text: "Delete", style: 'destructive', onPress: async () => {
                     await communityApi.delete(id);
-                    fetchMyPosts(); // 刷新列表
+                    fetchMyPosts();
                 }
             }
         ]);
@@ -74,13 +72,24 @@ export default function MyPosts() {
 
     return (
         <View className="flex-1 bg-white">
-            {/* Header */}
-            <View className="bg-white pt-14 pb-4 px-6 border-b border-gray-100 flex-row justify-between items-center">
-                <TouchableOpacity onPress={() => router.back()}>
-                    <Ionicons name="arrow-back" size={28} color="black" />
-                </TouchableOpacity>
-                <Text className="text-xl font-pbold text-slate-800">My Posts</Text>
-                <View style={{ width: 28 }} />
+            <View className="bg-purple-600 pt-16 pb-8 px-6 rounded-b-[35px] shadow-xl shadow-purple-100 relative overflow-hidden">
+                <View className="absolute -top-10 -right-10 w-32 h-32 bg-white/10 rounded-full" />
+                <View className="flex-row justify-between items-center">
+                    <TouchableOpacity
+                        onPress={() => router.back()}
+                        className="bg-white/20 p-2.5 rounded-2xl backdrop-blur-md border border-white/30"
+                    >
+                        <Ionicons name="chevron-back" size={24} color="white" />
+                    </TouchableOpacity>
+
+                    <View className="items-center">
+                        <Text className="text-white text-xl font-pbold">My Contributions</Text>
+                        <Text className="text-purple-100 text-[10px] font-pbold uppercase tracking-widest mt-1">
+                            {posts.length} Items Shared
+                        </Text>
+                    </View>
+                    <View style={{ width: 44 }} />
+                </View>
             </View>
 
             <FlatList
@@ -88,64 +97,81 @@ export default function MyPosts() {
                 keyExtractor={item => item._id}
                 contentContainerStyle={{ padding: 24, paddingBottom: 50 }}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchMyPosts(); }} tintColor="#F59E0B" />}
-
                 ListEmptyComponent={
-                    <View className="items-center mt-20">
-                        <MaterialCommunityIcons name="basket-outline" size={60} color="#e5e7eb" />
-                        <Text className="text-gray-400 mt-2 font-pmedium">You haven't posted anything yet.</Text>
+                    <View className="items-center justify-center mt-32 px-10">
+                        <View className="bg-purple-50 p-8 rounded-full mb-6">
+                            <MaterialCommunityIcons name="heart-plus-outline" size={80} color="#A855F7" />
+                        </View>
+                        <Text className="text-slate-800 text-xl font-pbold text-center">No Shares Yet</Text>
+                        <Text className="text-slate-400 text-center font-pregular mt-2">
+                            Start your sustainability journey by sharing excess food with your neighbors.
+                        </Text>
                         <TouchableOpacity
                             onPress={() => router.push("/community/create")}
-                            className="mt-6 bg-purple-500 px-6 py-3 rounded-full shadow-lg shadow-purple-200"
+                            className="mt-8 bg-purple-600 px-10 py-4 rounded-2xl shadow-lg shadow-purple-200"
                         >
-                            <Text className="text-white font-bold">Create New Post</Text>
+                            <Text className="text-white font-pbold text-lg text-center">Share My First Item</Text>
                         </TouchableOpacity>
                     </View>
                 }
-
                 renderItem={({ item }) => (
-                    <View className="bg-white rounded-2xl p-4 mb-4 border border-gray-100 shadow-sm">
-                        {/* 上半部分：点击跳转详情 */}
+                    <View className="bg-white rounded-[32px] p-5 mb-5 shadow-sm shadow-slate-200 border border-slate-50 mx-1">
                         <TouchableOpacity
                             onPress={() => router.push({ pathname: `/community/[id]`, params: { id: item._id } })}
-                            className="flex-row mb-4"
+                            activeOpacity={0.7}
+                            className="flex-row items-center mb-5"
                         >
-                            <View className="w-20 h-20 bg-gray-50 rounded-xl mr-4 overflow-hidden items-center justify-center">
-                                {item.imageUrl ? (
-                                    <Image source={{ uri: item.imageUrl }} className="w-full h-full" resizeMode="cover" />
-                                ) : (
-                                    <MaterialCommunityIcons name="food-variant" size={32} color="#cbd5e1" />
-                                )}
+                            <View className="relative">
+                                <View className="w-20 h-20 bg-slate-100 rounded-2xl overflow-hidden shadow-inner">
+                                    {item.imageUrl ? (
+                                        <Image source={{ uri: item.imageUrl }} className="w-full h-full" resizeMode="cover" />
+                                    ) : (
+                                        <View className="w-full h-full items-center justify-center">
+                                            <MaterialCommunityIcons name="food-apple-outline" size={32} color="#cbd5e1" />
+                                        </View>
+                                    )}
+                                </View>
+                                <View className={`absolute -top-1 -left-1 w-4 h-4 rounded-full border-2 border-white ${item.status === 'available' ? 'bg-green-500' : 'bg-slate-300'}`} />
                             </View>
-                            <View className="flex-1 justify-center">
-                                <Text className="text-lg font-pbold text-gray-800 mb-1" numberOfLines={1}>{item.name}</Text>
-                                <Text className="text-xs text-gray-500 mb-2">{new Date(item.createdAt).toLocaleDateString()}</Text>
-                                <View className={`self-start px-2 py-0.5 rounded-md ${item.status === 'taken' ? 'bg-gray-100' : 'bg-green-100'}`}>
-                                    <Text className={`text-[12px] font-bold ${item.status === 'taken' ? 'text-gray-500' : 'text-green-700'}`}>
-                                        {item.status}
+
+                            <View className="flex-1 ml-4">
+                                <View className="flex-row justify-between items-start mb-1">
+                                    <Text className="text-lg font-pbold text-slate-800 flex-1 mr-2" numberOfLines={1}>
+                                        {item.name}
+                                    </Text>
+                                    <View className={`px-2.5 py-1 rounded-lg ${item.status === 'taken' ? 'bg-slate-100' : 'bg-green-50'}`}>
+                                        <Text className={`text-[10px] font-pbold uppercase tracking-tighter ${item.status === 'taken' ? 'text-slate-400' : 'text-green-600'}`}>
+                                            {item.status}
+                                        </Text>
+                                    </View>
+                                </View>
+                                <View className="flex-row items-center">
+                                    <Ionicons name="calendar-outline" size={12} color="#94a3b8" />
+                                    <Text className="text-xs text-slate-400 font-pmedium ml-1">
+                                        Posted on {new Date(item.createdAt).toLocaleDateString()}
                                     </Text>
                                 </View>
                             </View>
                         </TouchableOpacity>
 
-                        {/* 分割线 */}
-                        <View className="h-[1px] bg-gray-100 mb-3" />
-
-                        {/* 下半部分：管理按钮 (Edit/Delete) */}
-                        <View className="flex-row gap-3">
-                            {/* Mark Taken Button */}
-                            {item.status !== 'taken' && (
+                        <View className="flex-row gap-3 pt-4 border-t border-slate-50">
+                            {item.status !== 'taken' ? (
                                 <TouchableOpacity
                                     onPress={() => handleMarkTaken(item._id)}
-                                    className="flex-1 flex-row items-center justify-center bg-gray-50 py-2.5 rounded-xl"
+                                    className="flex-[2] bg-slate-900 h-12 rounded-2xl flex-row items-center justify-center shadow-md shadow-slate-200"
                                 >
-                                    <Text className="text-gray-700 font-semibold text-sm ml-1">Mark Taken</Text>
+                                    <Ionicons name="checkmark-circle-outline" size={18} color="white" />
+                                    <Text className="text-white font-pbold text-sm ml-2">Mark Taken</Text>
                                 </TouchableOpacity>
+                            ) : (
+                                <View className="flex-[2] bg-slate-50 h-12 rounded-2xl items-center justify-center border border-slate-100">
+                                    <Text className="text-slate-300 font-pbold text-sm italic">Item Claimed</Text>
+                                </View>
                             )}
 
-                            {/* Delete Button */}
                             <TouchableOpacity
                                 onPress={() => handleDelete(item._id)}
-                                className="flex-1 flex-row items-center justify-center bg-red-50 py-2.5 rounded-xl"
+                                className="flex-1 bg-red-50 h-12 rounded-2xl items-center justify-center border border-red-100"
                             >
                                 <Ionicons name="trash-outline" size={18} color="#EF4444" />
                             </TouchableOpacity>

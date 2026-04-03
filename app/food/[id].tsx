@@ -162,154 +162,128 @@ export default function FoodDetail() {
         <View className="flex-1 bg-gray-50">
             <StatusBar barStyle="light-content" />
 
-            <View className="relative">
-                <View className="w-full h-80 bg-white">
-                    {item.imageUrl ? (
-                        <Image
-                            source={{ uri: item.imageUrl }}
-                            className="w-full h-full"
-                            resizeMode="contain"
-                        />
-                    ) : (
-                        <View className={`w-full h-full items-center justify-center ${statusBg}`}>
-                            <MaterialCommunityIcons name="food" size={120} color={statusColor} opacity={0.5} />
-                        </View>
-                    )}
-                    <View className="absolute bottom-0 w-full h-32 bg-black/10" />
-                </View>
+            <View className="relative h-[45%]">
+                {item.imageUrl ? (
+                    <Image
+                        source={{ uri: item.imageUrl }}
+                        className="w-full h-full"
+                        resizeMode="contain"
+                    />
+                ) : (
+                    <View className={`w-full h-full items-center justify-center ${statusBg}`}>
+                        <MaterialCommunityIcons name="food" size={100} color={statusColor} opacity={0.3} />
+                    </View>
+                )}
+                {/* 顶部渐变遮罩，为了让白色按钮更清晰 */}
+                <View className="absolute top-0 left-0 right-0 h-32 bg-black/20" />
 
-                {/* 悬浮导航按钮 */}
                 <View className="absolute top-14 left-6 right-6 flex-row justify-between z-10">
                     <TouchableOpacity
                         onPress={() => router.back()}
-                        className="w-10 h-10 bg-gray-200 backdrop-blur-md rounded-full items-center justify-center"
+                        className="w-12 h-12 bg-white/90 backdrop-blur-md rounded-2xl items-center justify-center shadow-sm"
                     >
-                        <Ionicons name="arrow-back" size={24} color="white" />
+                        <Ionicons name="chevron-back" size={28} color="#1e293b" />
                     </TouchableOpacity>
 
                     <TouchableOpacity
                         onPress={handleEdit}
-                        className="w-10 h-10 bg-gray-200 backdrop-blur-md rounded-full items-center justify-center"
+                        className="w-12 h-12 bg-white/90 backdrop-blur-md rounded-2xl items-center justify-center shadow-sm"
                     >
-                        <Ionicons name="pencil" size={20} color="white" />
+                        <Ionicons name="ellipsis-horizontal" size={24} color="#1e293b" />
                     </TouchableOpacity>
                 </View>
             </View>
 
+            {/* 内容主体：向上偏移覆盖图片底部 */}
             <ScrollView
-                className="flex-1 -mt-10"
-                contentContainerStyle={{ paddingBottom: 120 }}
-                showsVerticalScrollIndicator={false}
+                className="flex-1 -mt-12 bg-white rounded-t-[45px] shadow-2xl shadow-black/20"
+                contentContainerStyle={{ paddingBottom: 140 }}
             >
-                <View className="bg-gray-50 rounded-t-[40px] px-6 pt-8 pb-6 min-h-screen">
-
-                    {/* 标题栏 */}
-                    <View className="flex-row justify-between items-start mb-6">
+                <View className="px-8 pt-10">
+                    {/* 核心信息 */}
+                    <View className="flex-row justify-between items-start mb-8">
                         <View className="flex-1 mr-4">
-                            <Text className="text-3xl font-pbold text-slate-800 leading-tight">
+                            <Text className="text-gray-400 font-pbold text-xs uppercase tracking-widest mb-1">
+                                {item.category}
+                            </Text>
+                            <Text className="text-3xl font-pbold text-slate-900 leading-tight">
                                 {item.name}
                             </Text>
                             {item.brand && (
-                                <Text className="text-lg text-gray-500 font-pmedium mt-1">
+                                <Text className="text-lg text-slate-500 font-pmedium">
                                     {item.brand}
                                 </Text>
                             )}
                         </View>
-                        {/* 数量 Badge */}
-                        <View className="bg-white border border-gray-100 px-4 py-3 rounded-2xl shadow-slate-300 items-center">
-                            <Text className="text-2xl font-pbold text-slate-800">{item.quantity}</Text>
-                            <Text className="text-xs text-gray-400 font-pbold uppercase">{item.unit}</Text>
+
+                        {/* 价格/价值标识 */}
+                        <View className="items-end">
+                            <Text className="text-2xl font-pbold text-primary">₸ {item.price || 0}</Text>
+                            <Text className="text-gray-400 text-xs font-psemibold">VALUE</Text>
                         </View>
                     </View>
 
-                    {/* 状态栏 (Status Bar) */}
-                    <View className={`w-full p-4 rounded-2xl flex-row items-center justify-between mb-6 ${statusBg}`}>
-                        <View className="flex-row items-center">
-                            <Ionicons name={statusIcon as any} size={24} color={statusColor} />
-                            <View className="ml-3">
-                                <Text className="text-base font-pbold" style={{ color: statusColor }}>
-                                    {statusText}
-                                </Text>
-                                <Text className="text-xs text-gray-600 opacity-80">
-                                    {days < 0 ? `Expired on ${formatDate(item.expiryDate)}` : `${days} days remaining`}
-                                </Text>
-                            </View>
+                    {/* 状态磁贴：更现代的设计 */}
+                    <View className={`rounded-[32px] p-6 mb-8 flex-row items-center ${statusBg}`}>
+                        <View className="w-14 h-14 bg-white/60 rounded-2xl items-center justify-center mr-4">
+                            <Ionicons name={statusIcon as any} size={32} color={statusColor} />
                         </View>
-                        {/* 简易进度条背景 */}
-                        <View className="h-1.5 w-16 bg-black/5 rounded-full overflow-hidden">
-                            {/* 这里的 width 应该是动态计算的，简单起见写死演示 */}
-                            <View
-                                className="h-full rounded-full"
-                                style={{
-                                    width: `${Math.max(0, Math.min(100, (days / 30) * 100))}%`,
-                                    backgroundColor: statusColor
-                                }}
-                            />
+                        <View className="flex-1">
+                            <Text className="text-xs font-pbold uppercase opacity-60" style={{ color: statusColor }}>
+                                Storage Status
+                            </Text>
+                            <Text className="text-xl font-pbold text-slate-900">
+                                {days < 0 ? 'Expired' : `${days} Days Left`}
+                            </Text>
+                        </View>
+                        <View className="items-end">
+                            <Text className="text-xs font-pbold text-slate-400 mb-1">{item.quantity} {item.unit}</Text>
+                            {/* 动态圆形进度 */}
+                            <View className="w-2 h-2 rounded-full" style={{ backgroundColor: statusColor }} />
                         </View>
                     </View>
 
-                    {/* 详细信息网格 */}
-                    <Text className="text-gray-900 font-pbold text-lg mb-4">Details</Text>
-                    <View className="flex-row flex-wrap gap-3 mb-8">
-                        {/* Category */}
+                    {/* Bento Grid 详情区块 */}
+                    <View className="flex-row flex-wrap gap-4 mb-8">
                         <DetailBox
-                            icon="grid-outline"
-                            label="Category"
-                            value={item.category}
-                        />
-                        {/* Expiry Date */}
-                        <DetailBox
-                            icon="calendar-outline"
-                            label="Expires"
+                            icon="calendar"
+                            label="Best Before"
                             value={formatDate(item.expiryDate)}
-                            highlight={days <= 3}
+                            subValue={days < 0 ? "Past" : "Upcoming"}
                         />
-                        {/* Production Date */}
-                        {item.productionDate && (
-                            <DetailBox
-                                icon="time-outline"
-                                label="Produced"
-                                value={formatDate(item.productionDate)}
-                            />
-                        )}
-                        {/* Added Date */}
                         <DetailBox
-                            icon="download-outline"
-                            label="Added"
-                            value={formatDate(item.createdAt)}
+                            icon="barcode"
+                            label="Barcode"
+                            value={item.barcode || "N/A"}
                         />
                     </View>
 
-                    {/* 备注区域 */}
-                    <Text className="text-gray-900 font-pbold text-lg mb-3">Notes</Text>
-                    <View className="bg-white p-4 rounded-2xl border border-gray-100 min-h-[100px]">
-                        {item.notes ? (
-                            <Text className="text-gray-600 leading-6 font-pregular">{item.notes}</Text>
-                        ) : (
-                            <Text className="text-gray-400 italic">No notes added.</Text>
-                        )}
+                    {/* 备注：带装饰的引用样式 */}
+                    <View className="bg-slate-50 p-6 rounded-[28px] border border-slate-100">
+                        <Text className="text-slate-900 font-pbold text-lg mb-2">Chef's Notes</Text>
+                        <Text className="text-slate-500 leading-6 font-pregular">
+                            {item.notes || "No special instructions for this item."}
+                        </Text>
                     </View>
-
                 </View>
             </ScrollView>
 
-            {/* 3. 底部固定按钮栏 */}
-            <View className="absolute bottom-0 left-0 right-0 bg-white px-6 pt-4 pb-8 border-t border-gray-100 shadow-slate-500 rounded-t-[30px] flex-row gap-4">
-                {/* Delete Button */}
+            {/* 底部按钮：使用渐变背景或大圆角，增加触感反馈 */}
+            <View className="absolute bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl px-8 pt-4 pb-10 flex-row gap-4 items-center">
                 <TouchableOpacity
                     onPress={handleDelete}
-                    className="flex-1 bg-gray-50 border border-gray-200 py-4 rounded-2xl flex-row justify-center items-center active:bg-gray-100"
+                    className="w-16 h-16 bg-slate-100 rounded-3xl items-center justify-center border border-slate-200"
                 >
-                    <Ionicons name="trash-outline" size={20} color="#64748b" />
+                    <Ionicons name="trash-outline" size={24} color="#ef4444" />
                 </TouchableOpacity>
 
-                {/* Consume Button (Primary) */}
                 <TouchableOpacity
                     onPress={handleConsume}
-                    className="flex-[2] bg-primary py-4 rounded-2xl flex-row justify-center items-center shadow-lg shadow-green-200 active:bg-green-600"
+                    activeOpacity={0.8}
+                    className="flex-1 h-16 bg-primary rounded-3xl flex-row justify-center items-center shadow-lg shadow-green-200"
                 >
-                    <MaterialCommunityIcons name="silverware-fork-knife" size={20} color="white" />
-                    <Text className="ml-2 font-pbold text-white text-lg">Eat it!</Text>
+                    <MaterialCommunityIcons name="silverware-fork-knife" size={24} color="white" />
+                    <Text className="ml-3 font-pbold text-white text-xl">Eat & Save</Text>
                 </TouchableOpacity>
             </View>
         </View>

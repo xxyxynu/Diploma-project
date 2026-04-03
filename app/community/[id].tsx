@@ -16,10 +16,9 @@ import {
     View
 } from "react-native";
 import MapView, { Circle, Marker } from "react-native-maps";
+import { LinearGradient } from "expo-linear-gradient";
 import { communityApi, CommunityPost } from "../../api/community";
 import { useUserStore } from "../../store/userStore";
-
-const { width } = Dimensions.get('window');
 
 export default function CommunityDetail() {
     const { id } = useLocalSearchParams();
@@ -151,180 +150,209 @@ export default function CommunityDetail() {
         <View className="flex-1 bg-white">
             <StatusBar barStyle="dark-content" />
 
-            {/* Header Image */}
-            <View className="h-72 w-full bg-gray-100 relative">
+            {/* Header Section: 增加阴影和更高级的模糊效果 */}
+            <View className="h-80 w-full relative">
                 {post.imageUrl ? (
-                    <Image source={{ uri: post.imageUrl }} className="w-full h-full" resizeMode="cover" />
+                    <Image source={{ uri: post.imageUrl }} className="w-full h-full" resizeMode="contain" />
                 ) : (
                     <View className="w-full h-full items-center justify-center bg-purple-50">
-                        <MaterialCommunityIcons name="image-off-outline" size={60} color="#FCD34D" />
+                        <MaterialCommunityIcons name="food-variant" size={80} color="#DDD6FE" />
                     </View>
                 )}
-                <TouchableOpacity onPress={() => router.back()} className="absolute top-12 left-6 bg-black/30 backdrop-blur-md w-10 h-10 rounded-full items-center justify-center">
-                    <Ionicons name="arrow-back" size={24} color="white" />
+
+                {/* 顶部渐变遮罩：确保返回按钮清晰 */}
+                <LinearGradient
+                    colors={['rgba(0,0,0,0.4)', 'transparent']}
+                    className="absolute top-0 left-0 right-0 h-24"
+                />
+
+                <TouchableOpacity
+                    onPress={() => router.back()}
+                    className="absolute top-12 left-6 bg-white/20 backdrop-blur-xl w-12 h-12 rounded-2xl items-center justify-center border border-white/30"
+                >
+                    <Ionicons name="chevron-back" size={24} color="white" />
                 </TouchableOpacity>
 
-                {/* Status Badge on Image */}
-                <View className="absolute bottom-10 right-6 px-3 py-1.5 rounded-lg bg-white/90 backdrop-blur-md shadow-sm">
-                    <Text className={`font-bold text-xs uppercase ${isTaken ? 'text-gray-500' : 'text-green-600'}`}>
+                {/* 悬浮的状态标签：右下角，更有设计感 */}
+                <View className={`absolute bottom-12 right-6 px-4 py-2 rounded-2xl backdrop-blur-md shadow-lg ${isTaken ? 'bg-gray-100/90' : 'bg-green-500/90'}`}>
+                    <Text className={`font-pbold text-xs uppercase tracking-widest ${isTaken ? 'text-gray-500' : 'text-white'}`}>
                         {post.status}
                     </Text>
                 </View>
             </View>
 
-            <ScrollView className="-mt-8 flex-1 bg-white rounded-t-[35px]" contentContainerStyle={{ paddingBottom: 120 }}>
-                <View className="pt-8 px-6">
-
-                    {/* Title & Tags */}
-                    <Text className="text-3xl font-pbold text-slate-900 leading-tight mb-3">{post.name}</Text>
-                    <View className="flex-row flex-wrap gap-2 mb-6">
-                        {post.tags.map(tag => (
-                            <View key={tag} className="bg-gray-100 px-3 py-1 rounded-full">
-                                <Text className="text-gray-500 font-bold text-xs">{tag}</Text>
-                            </View>
-                        ))}
-                    </View>
-
-                    {/* Owner Info */}
-                    <View className="flex-row items-center mb-8 border-b border-gray-100 pb-6">
-                        <View className="w-12 h-12 bg-purple-100 rounded-full items-center justify-center mr-3">
-                            <Text className="text-purple-600 font-bold text-lg">{post.postedBy.name[0]}</Text>
-                        </View>
-                        <View>
-                            <Text className="text-sm text-gray-500">Shared by</Text>
-                            <Text className="font-pbold text-slate-800 text-base">{isOwner ? "You" : post.postedBy.name}</Text>
+            {/* 内容主体：向上偏移覆盖图片 */}
+            <ScrollView
+                className="-mt-10 flex-1 bg-white rounded-t-[40px] shadow-2xl"
+                contentContainerStyle={{ paddingBottom: 140 }}
+                showsVerticalScrollIndicator={false}
+            >
+                <View className="px-8 pt-10">
+                    {/* 1. 标题与标签 */}
+                    <View className="mb-6">
+                        <Text className="text-3xl font-pbold text-slate-900 leading-tight mb-4">{post.name}</Text>
+                        <View className="flex-row flex-wrap gap-2">
+                            {post.tags.map(tag => (
+                                <View key={tag} className="bg-purple-50 px-4 py-1.5 rounded-xl border border-purple-100">
+                                    <Text className="text-purple-600 font-psemibold text-xs">{tag}</Text>
+                                </View>
+                            ))}
                         </View>
                     </View>
 
-                    {/*Location Map Section (可点击跳转) */}
-                    <Text className="text-slate-900 font-pbold text-lg mb-3">Location</Text>
-
-                    {/* 把地图包在 TouchableOpacity 里，点击直接触发导航 */}
-                    <TouchableOpacity
-                        onPress={handleOpenMap}
-                        activeOpacity={0.9}
-                        className="h-48 w-full rounded-2xl overflow-hidden mb-4 bg-gray-100 border border-gray-200 relative"
-                    >
-                        <MapView
-                            style={{ flex: 1 }}
-                            initialRegion={{
-                                latitude: locationCoords.latitude,
-                                longitude: locationCoords.longitude,
-                                latitudeDelta: 0.01, // 稍微放大一点
-                                longitudeDelta: 0.01,
-                            }}
-                            scrollEnabled={false} // 禁止滑动，防止误触，想看详情点击跳转
-                            zoomEnabled={false}
-                            pitchEnabled={false}
-                        >
-                            {/* 隐私圈 */}
-                            <Circle
-                                center={locationCoords}
-                                radius={300} // 300米范围
-                                strokeColor="rgba(245, 158, 11, 0.8)" // Amber stroke
-                                fillColor="rgba(245, 158, 11, 0.2)"   // Amber fill
+                    {/* 2. 发布者小卡片：增加信任感 */}
+                    <View className="flex-row items-center bg-slate-50 p-4 rounded-3xl border border-slate-100 mb-8">
+                        <View className="w-14 h-14 bg-white rounded-2xl items-center justify-center mr-4 border border-slate-100">
+                            <Image
+                                source={{ uri: `https://api.dicebear.com/9.x/avataaars/png?seed=${post.postedBy.name}` }}
+                                className="w-12 h-12 rounded-xl"
                             />
-                            {/* 中心标记 (显示大概位置中心) */}
-                            <Marker coordinate={locationCoords} opacity={0.5} />
-                        </MapView>
+                        </View>
+                        <View className="flex-1">
+                            <Text className="text-slate-400 text-xs font-pmedium">Donated by</Text>
+                            <Text className="font-pbold text-slate-800 text-lg">{isOwner ? "You" : post.postedBy.name}</Text>
+                        </View>
+                        {!isOwner && (
+                            <View className="bg-green-100 px-3 py-1 rounded-lg">
+                                <Text className="text-green-700 text-[10px] font-pbold uppercase">Verified</Text>
+                            </View>
+                        )}
+                    </View>
 
-                        {/* 地图上的覆盖按钮，提示用户可以点击 */}
-                        <View className="absolute bottom-2 right-2 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-lg flex-row items-center shadow-sm">
-                            <Text className="text-xs font-bold text-purple-600 mr-1">Open in 2GIS</Text>
-                            <MaterialCommunityIcons name="map-marker-radius" size={14} color="#7C3AED" />
+                    {/* 3. 描述部分 */}
+                    <View className="mb-8">
+                        <View className="flex-row items-center mb-3">
+                            <MaterialCommunityIcons name="text-box" size={20} color="#6366f1" />
+                            <Text className="text-slate-900 font-pbold text-lg ml-2">Story</Text>
+                        </View>
+                        <Text className="text-slate-500 leading-7 text-base font-pregular bg-indigo-50/30 p-4 rounded-2xl italic">
+                            "{post.description}"
+                        </Text>
+                    </View>
+
+                    {/* 5. Contact Info Block */}
+                    <Text className="text-slate-900 font-pbold text-lg mb-3">Contact Provider</Text>
+                    <TouchableOpacity
+                        onPress={handleCopy}
+                        activeOpacity={0.7}
+                        className="bg-slate-50 px-3 py-5 rounded-[28px] border border-slate-100 flex-row items-center justify-between mb-8"
+                    >
+                        <View className="flex-row items-center flex-1">
+                            <View className="bg-white w-12 h-12 rounded-2xl items-center justify-center border border-slate-100 mr-4">
+                                <Ionicons name="call" size={20} color="#6366f1" />
+                            </View>
+                            <View>
+                                <Text className="text-slate-400 text-[10px] font-pbold uppercase mb-0.5">Phone Number</Text>
+                                <Text className="text-slate-900 font-pbold text-base">{post.contact}</Text>
+                            </View>
+                        </View>
+
+                        {/* 复制按钮提示 */}
+                        <View className="px-2 py-2 rounded-xl">
+                            <Ionicons name="copy-outline" size={18} color="#6366f1" />
                         </View>
                     </TouchableOpacity>
 
-                    {/* 地址详情卡片 */}
-                    <View className="bg-purple-50 p-4 rounded-xl mb-8 border border-purple-100">
-                        <View className="flex-row items-start">
-                            <Ionicons name="location" size={20} color="#7C3AED" style={{ marginTop: 2 }} />
-                            <View className="ml-3 flex-1">
-                                {/* 1. 公共描述 (最重要，例如 "Near Dostyk Plaza") */}
-                                <Text className="text-purple-900 font-bold text-lg leading-6">
-                                    {post.location.publicDescription || "No location description"}
-                                </Text>
-
-                                {/* 2. 城市与区域 */}
-                                <Text className="text-purple-800/70 text-sm mt-1">
-                                    {post.location.city}
-                                    {post.location.district ? ` • ${post.location.district}` : ''}
-                                </Text>
-
-                                {/* 3. 精确地址 (只有发布者可见，或者已确认状态可见) */}
-                                {(isOwner && post.location.exactAddress) && (
-                                    <View className="mt-3 pt-3 border-t border-purple-200/60">
-                                        <Text className="text-purple-900 text-xs font-bold uppercase mb-1">
-                                            Exact Address (Only you see this):
-                                        </Text>
-                                        <Text className="text-purple-900 font-medium">
-                                            {post.location.exactAddress}
-                                        </Text>
-                                    </View>
-                                )}
-                            </View>
-                        </View>
-                    </View>
-
-                    {/* Description */}
-                    <Text className="text-slate-900 font-pbold text-lg mb-3">Description</Text>
-                    <Text className="text-gray-600 leading-7 text-base mb-8">{post.description}</Text>
-
-                    {/* Contact (Read Only) */}
-                    {!isOwner && (
-                        <View className="flex-row items-center justify-between bg-gray-50 p-4 rounded-2xl border border-gray-100 mb-4">
+                    {/* 4. 地图与位置：增加内阴影感 */}
+                    <View className="mb-8">
+                        <View className="flex-row justify-between items-center mb-4">
                             <View className="flex-row items-center">
-                                <Ionicons name="call" size={18} color="#4B5563" />
-                                <Text className="ml-3 text-lg font-semibold text-gray-800">{post.contact}</Text>
+                                <MaterialCommunityIcons name="map-marker-radius" size={20} color="#ef4444" />
+                                <Text className="text-slate-900 font-pbold text-lg ml-2">Pickup Location</Text>
                             </View>
-                            <TouchableOpacity onPress={handleCopy} className="px-1 py-1">
-                                <Ionicons name="copy-outline" size={18} color="#4B5563" />
+                            <TouchableOpacity onPress={handleOpenMap}>
+                                <Text className="text-primary font-pbold text-xs uppercase">Get Directions</Text>
                             </TouchableOpacity>
                         </View>
-                    )}
 
+                        <TouchableOpacity
+                            onPress={handleOpenMap}
+                            activeOpacity={0.9}
+                            className="h-56 w-full rounded-[32px] overflow-hidden border-4 border-slate-50 shadow-md relative"
+                        >
+                            <MapView
+                                style={{ flex: 1 }}
+                                initialRegion={{
+                                    latitude: locationCoords.latitude,
+                                    longitude: locationCoords.longitude,
+                                    latitudeDelta: 0.01,
+                                    longitudeDelta: 0.01,
+                                }}
+                                scrollEnabled={false}
+                                zoomEnabled={false}
+                                pitchEnabled={false}
+                            >
+                                <Circle
+                                    center={locationCoords}
+                                    radius={300}
+                                    strokeColor="rgba(99, 102, 241, 0.5)"
+                                    fillColor="rgba(99, 102, 241, 0.15)"
+                                />
+                                <Marker coordinate={locationCoords}>
+                                    <View className="bg-white p-2 rounded-full shadow-lg border border-purple-100">
+                                        <MaterialCommunityIcons name="food-apple" size={20} color="#7C3AED" />
+                                    </View>
+                                </Marker>
+                            </MapView>
+
+                            {/* 浮动地址信息块 */}
+                            <View className="absolute bottom-4 left-4 right-4 bg-white/95 p-4 rounded-2xl shadow-xl flex-row items-center">
+                                <View className="bg-purple-100 p-2 rounded-xl mr-3">
+                                    <Ionicons name="location" size={18} color="#7C3AED" />
+                                </View>
+                                <View className="flex-1">
+                                    <Text className="text-slate-900 font-pbold text-sm" numberOfLines={1}>
+                                        {post.location.publicDescription}
+                                    </Text>
+                                    <Text className="text-slate-400 text-[10px] font-pmedium">
+                                        {post.location.city} • {post.location.district || 'Nearby'}
+                                    </Text>
+                                </View>
+                            </View>
+
+                        </TouchableOpacity>
+
+                    </View>
                 </View>
             </ScrollView>
 
-            {/* Bottom Actions */}
-            <View className="absolute bottom-0 w-full bg-white px-6 pt-4 pb-10 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] rounded-t-[20px]">
+            {/* Bottom Floating Bar */}
+            <View className="absolute bottom-0 w-full bg-white/80 backdrop-blur-xl px-8 pt-4 pb-10 border-t border-slate-100">
                 {isOwner ? (
-                    <View className="flex-row gap-3">
-                        <TouchableOpacity onPress={handleDelete} className="flex-1 bg-gray-50 py-4 rounded-2xl items-center border border-gray-100">
-                            <Ionicons name="trash-outline" size={20} color="gray" />
+                    <View className="flex-row gap-4">
+                        <TouchableOpacity
+                            onPress={handleDelete}
+                            className="w-16 h-16 bg-red-50 rounded-3xl items-center justify-center border border-red-100 active:bg-red-100"
+                        >
+                            <Ionicons name="trash-outline" size={24} color="#EF4444" />
                         </TouchableOpacity>
 
-                        {post.status !== 'taken' ? (
-                            <TouchableOpacity onPress={() => handleUpdateStatus('taken')} className="flex-[2] bg-slate-800 py-4 rounded-2xl items-center">
-                                <Text className="text-white font-bold text-lg">Mark as Taken</Text>
-                            </TouchableOpacity>
-                        ) : (
-                            <TouchableOpacity onPress={() => handleUpdateStatus('available')} className="flex-[2] bg-green-600 py-4 rounded-2xl items-center">
-                                <Text className="text-white font-bold text-lg">Relist Item</Text>
-                            </TouchableOpacity>
-                        )}
+                        <TouchableOpacity
+                            onPress={() => handleUpdateStatus(isTaken ? 'available' : 'taken')}
+                            className={`flex-1 h-16 rounded-3xl items-center justify-center shadow-lg ${isTaken ? 'bg-green-600 shadow-green-200' : 'bg-slate-900 shadow-slate-300'}`}
+                        >
+                            <Text className="text-white font-pbold text-lg">
+                                {isTaken ? "Relist Now" : "Mark as Taken"}
+                            </Text>
+                        </TouchableOpacity>
                     </View>
                 ) : (
-                    <View className="flex-row gap-3">
-                        {/*Request / Reserve Button */}
-                        {post.status === 'available' ? (
-                            <TouchableOpacity
-                                onPress={handleReserve}
-                                disabled={actionLoading}
-                                className="flex-1 bg-gray-100 py-4 rounded-2xl items-center justify-center"
-                            >
-                                {actionLoading ? <ActivityIndicator size="small" color="black" /> : <Text className="text-gray-800 font-bold text-lg">Request</Text>}
-                            </TouchableOpacity>
-                        ) : (
-                            <View className="flex-1 bg-gray-100 py-4 rounded-2xl items-center justify-center opacity-50">
-                                <Text className="text-gray-500 font-bold">{post.status.toUpperCase()}</Text>
-                            </View>
-                        )}
+                    <View className="flex-row gap-4">
+                        <TouchableOpacity
+                            onPress={handleReserve}
+                            disabled={isTaken}
+                            className={`flex-1 h-16 rounded-3xl items-center justify-center border-2 ${isTaken ? 'border-slate-100 bg-slate-50' : 'border-slate-200 bg-white'}`}
+                        >
+                            <Text className={`font-pbold text-lg ${isTaken ? 'text-slate-300' : 'text-slate-800'}`}>Request</Text>
+                        </TouchableOpacity>
 
-                        {/* Contact Button */}
-                        <TouchableOpacity onPress={handleContact} className="flex-[2] bg-purple-500 py-4 rounded-2xl flex-row items-center justify-center">
-                            <Ionicons name="chatbubble-ellipses" size={22} color="white" />
-                            <Text className="text-white font-bold text-lg ml-2">Contact</Text>
+                        <TouchableOpacity
+                            onPress={handleContact}
+                            disabled={isTaken}
+                            className={`flex-1 h-16 rounded-3xl flex-row items-center justify-center shadow-xl ${isTaken ? 'bg-slate-200 shadow-none' : 'bg-purple-600 shadow-purple-200'}`}
+                        >
+                            <Ionicons name="chatbubble-ellipses" size={20} color="white" />
+                            <Text className="text-white font-pbold text-lg ml-2">Chat</Text>
                         </TouchableOpacity>
                     </View>
                 )}

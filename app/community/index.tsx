@@ -143,44 +143,52 @@ export default function CommunityFeed() {
 
     return (
         <View className="flex-1 bg-gray-50">
-            {/* Header */}
-            <View className="bg-purple-500 pt-16 pb-4 px-6 rounded-b-[30px] z-10">
-                <View className="flex-row justify-between items-center mb-4">
+            {/* Header: 渐变色背景 + 磨砂质感按钮 */}
+            <View className="bg-purple-600 pt-16 pb-12 px-6 rounded-b-[40px] shadow-xl shadow-purple-200 relative overflow-hidden">
+                {/* 装饰性背景圆圈 */}
+                <View className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full" />
+
+                <View className="flex-row justify-between items-center mb-6">
                     <View>
-                        <Text className="text-white text-2xl font-pbold">Community</Text>
-                        <Text className="text-purple-100 text-sm font-pmedium">Kazakhstan Zero Waste 🇰🇿</Text>
+                        <Text className="text-white text-3xl font-pbold tracking-tight">Discover</Text>
+                        <View className="flex-row items-center mt-1">
+                            <View className="w-2 h-2 bg-green-400 rounded-full mr-2" />
+                            <Text className="text-purple-100 text-xs font-pmedium">Sharing in Kazakhstan</Text>
+                        </View>
                     </View>
 
                     <View className="flex-row gap-3">
-                        <TouchableOpacity onPress={() => router.push("/community/my-posts")} className="bg-white/20 p-3 rounded-full backdrop-blur-md">
-                            <Ionicons name="person" size={24} color="white" />
+                        <TouchableOpacity
+                            onPress={() => router.push("/community/my-posts")}
+                            className="bg-white/20 p-3 rounded-2xl backdrop-blur-md border border-white/30"
+                        >
+                            <Ionicons name="heart" size={22} color="white" />
                         </TouchableOpacity>
-                        <TouchableOpacity onPress={() => router.push("/community/create")} className="bg-white p-3 rounded-full shadow-sm">
-                            <Ionicons name="add" size={24} color="#9333ea" />
+                        <TouchableOpacity
+                            onPress={() => router.push("/community/create")}
+                            className="bg-white p-3 rounded-2xl shadow-lg"
+                        >
+                            <Ionicons name="add" size={22} color="#9333ea" />
                         </TouchableOpacity>
                     </View>
                 </View>
 
-                {/* 排序按钮 (仅在非 Nearby 模式下显示，或者显示当前排序状态) */}
-                <View className="flex-row justify-end mt-1">
-                    {isNearby ? (
-                        // 如果是 Nearby 模式，显示 "Sorted by Distance" 提示
-                        <View className="flex-row items-center bg-white/20 px-3 py-1.5 rounded-xl border border-white/10">
-                            <Ionicons name="navigate-circle" size={14} color="#FEF3C7" style={{ marginRight: 4 }} />
-                            <Text className="text-purple-50 text-xs font-bold">Nearest First</Text>
-                        </View>
-                    ) : (
-                        // 否则显示时间排序按钮
-                        <TouchableOpacity
-                            onPress={() => setSortOrder(prev => prev === 'newest' ? 'oldest' : 'newest')}
-                            className="flex-row items-center bg-black/10 px-3 py-1.5 rounded-xl border border-white/10"
-                        >
-                            <Text className="text-purple-50 text-xs font-bold mr-1">
-                                {sortOrder === 'newest' ? 'Newest' : 'Oldest'}
-                            </Text>
-                            <Ionicons name={sortOrder === 'newest' ? "arrow-down" : "arrow-up"} size={12} color="#FEF3C7" />
-                        </TouchableOpacity>
-                    )}
+                {/* 排序与快速提示 */}
+                <View className="flex-row justify-between items-center bg-black/10 p-2 rounded-2xl border border-white/10">
+                    <View className="flex-row items-center ml-2">
+                        <Ionicons name="funnel-outline" size={14} color="#ddd6fe" />
+                        <Text className="text-purple-100 text-[10px] font-pbold uppercase ml-2 tracking-widest">
+                            {isNearby ? "Proximity Active" : "Sorted by Date"}
+                        </Text>
+                    </View>
+                    <TouchableOpacity
+                        onPress={() => setSortOrder(prev => prev === 'newest' ? 'oldest' : 'newest')}
+                        className="bg-white/20 px-4 py-1.5 rounded-xl border border-white/20"
+                    >
+                        <Text className="text-white text-[10px] font-pbold uppercase">
+                            {sortOrder === 'newest' ? 'Newest' : 'Oldest'}
+                        </Text>
+                    </TouchableOpacity>
                 </View>
             </View>
 
@@ -251,45 +259,56 @@ export default function CommunityFeed() {
                     renderItem={({ item }) => (
                         <TouchableOpacity
                             onPress={() => router.push({ pathname: `/community/[id]`, params: { id: item._id } })}
-                            className="bg-white rounded-3xl p-4 mb-4  flex-row"
+                            activeOpacity={0.8}
+                            className="bg-white rounded-[32px] p-4 mb-5 flex-row shadow-sm shadow-slate-200 border border-slate-50 mx-1"
                         >
-                            <View className="w-24 h-24 bg-gray-50 rounded-2xl mr-4 overflow-hidden items-center justify-center">
-                                {item.imageUrl ? (
-                                    <Image source={{ uri: item.imageUrl }} className="w-full h-full" resizeMode="cover" />
-                                ) : (
-                                    <MaterialCommunityIcons name="food-variant" size={40} color="#cbd5e1" />
-                                )}
+                            {/* Image container with Badge */}
+                            <View className="relative">
+                                <View className="w-28 h-28 bg-slate-100 rounded-[24px] overflow-hidden">
+                                    {item.imageUrl ? (
+                                        <Image source={{ uri: item.imageUrl }} className="w-full h-full" resizeMode="cover" />
+                                    ) : (
+                                        <View className="w-full h-full items-center justify-center">
+                                            <MaterialCommunityIcons name="food-apple-outline" size={40} color="#e2e8f0" />
+                                        </View>
+                                    )}
+                                </View>
+                                {/* Category Tag on Image */}
+                                <View className="absolute top-2 left-2 bg-black/40 backdrop-blur-md px-2 py-1 rounded-lg">
+                                    <Text className="text-white text-[8px] font-pbold uppercase">{item.tags[0] || 'Other'}</Text>
+                                </View>
                             </View>
 
-                            <View className="flex-1 justify-between py-1">
+                            <View className="flex-1 ml-4 justify-between py-1">
                                 <View>
-                                    <View className="flex-row justify-between">
-                                        <Text className="text-lg font-pbold text-gray-800 flex-1 mr-2" numberOfLines={1}>{item.name}</Text>
-                                        <Text className="text-[10px] text-gray-400 mt-1">{new Date(item.createdAt).toLocaleDateString()}</Text>
+                                    <View className="flex-row justify-between items-start">
+                                        <Text className="text-lg font-pbold text-slate-800 flex-1 mr-2" numberOfLines={1}>
+                                            {item.name}
+                                        </Text>
+                                        <StatusBadge status={item.status} />
                                     </View>
-                                    <View className="flex-row items-center mt-1">
-                                        <Ionicons name="location-sharp" size={12} color={isNearby ? "#16a34a" : "#9ca3af"} />
-                                        <Text className="text-xs ml-1 text-gray-500 numberOfLines={1}">
-                                            {/* 如果是 Nearby 模式，高亮显示距离 */}
-                                            {item.distance
-                                                ? `${item.distance} km away`
-                                                : `${item.location?.city || 'Unknown'} • ${item.location?.district || ''}`
-                                            }
+
+                                    <View className="flex-row items-center mt-2">
+                                        <View className="bg-orange-50 p-1 rounded-md">
+                                            <Ionicons name="location" size={10} color="#f59e0b" />
+                                        </View>
+                                        <Text className="text-[11px] ml-1.5 text-slate-400 font-pmedium">
+                                            {item.distance ? `${item.distance} km away` : item.location.city}
                                         </Text>
                                     </View>
                                 </View>
 
-                                <View className="flex-row items-center justify-between mt-2">
+                                <View className="flex-row items-center justify-between border-t border-slate-50 pt-2">
                                     <View className="flex-row items-center">
-                                        {item.postedBy._id === userInfo?._id ? (
-                                            <View className="bg-purple-100 px-2 py-0.5 rounded-md mr-2">
-                                                <Text className="text-purple-700 text-[10px] font-bold">ME</Text>
-                                            </View>
-                                        ) : (
-                                            <Text className="text-xs text-gray-400 font-medium mr-2">by {item.postedBy.name}</Text>
-                                        )}
+                                        <Image
+                                            source={{ uri: `https://api.dicebear.com/9.x/avataaars/png?seed=${item.postedBy.name}` }}
+                                            className="w-5 h-5 rounded-full bg-slate-100"
+                                        />
+                                        <Text className="text-[10px] text-slate-400 ml-1.5 font-pmedium">
+                                            {item.postedBy._id === userInfo?._id ? "You" : item.postedBy.name}
+                                        </Text>
                                     </View>
-                                    <StatusBadge status={item.status} />
+                                    <Text className="text-[9px] text-slate-300 font-pbold uppercase">{new Date(item.createdAt).toLocaleDateString()}</Text>
                                 </View>
                             </View>
                         </TouchableOpacity>

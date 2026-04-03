@@ -11,6 +11,7 @@ import {
     ScrollView,
     Switch,
     Text,
+    TextInput,
     TouchableOpacity,
     View
 } from "react-native";
@@ -29,20 +30,24 @@ const CITIES = ['Almaty', 'Astana', 'Shymkent', 'Karaganda', 'Aktau', 'Atyrau', 
 
 export default function Profile() {
     const router = useRouter();
-    const { userInfo, logout, refreshUser, updatePreferences, updateCity } = useUserStore();
+    const { userInfo, logout, refreshUser, updatePreferences, updateCity, updateName } = useUserStore();
     const { selectedFridge, clearFridges } = useFridgeStore();
     const { loadFridges } = useFridgeInit();
 
     const { registerForPushNotificationsAsync } = usePushNotifications();
 
     const [stats, setStats] = useState<ItemStats>({ total: 0, fresh: 0, expiring: 0, expired: 0 });
-    const [leaderboard, setLeaderboard] = useState<LeaderboardData | null>(null); // 🆕 排行榜状态
+    const [leaderboard, setLeaderboard] = useState<LeaderboardData | null>(null); // 排行榜状态
     const [refreshing, setRefreshing] = useState(false);
     const [loading, setLoading] = useState(true);
     const [notificationsEnabled, setNotificationsEnabled] = useState(false);
 
     const [showDietaryModal, setShowDietaryModal] = useState(false);
     const [showCityModal, setShowCityModal] = useState(false);
+    const [showEditProfileModal, setShowEditProfileModal] = useState(false); // 编辑资料的 Modal 状态
+
+    const [editName, setEditName] = useState("");
+    const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
         if (selectedFridge) {
@@ -53,7 +58,7 @@ export default function Profile() {
     const initData = async () => {
         await Promise.all([
             fetchStats(),
-            fetchLeaderboard(), // 🆕 并行拉取排行榜
+            fetchLeaderboard(), // 并行拉取排行榜
             checkNotificationStatus(),
             refreshUser()
         ]);
@@ -70,7 +75,7 @@ export default function Profile() {
         }
     };
 
-    // 🆕 获取真实排行榜
+    // 获取排行榜
     const fetchLeaderboard = async () => {
         try {
             const data = await authApi.getLeaderboard();
@@ -140,7 +145,7 @@ export default function Profile() {
         await Promise.all([
             loadFridges(),
             fetchStats(),
-            fetchLeaderboard(), // 刷新时也拉取排行榜
+            fetchLeaderboard(),
             refreshUser(),
             checkNotificationStatus()
         ]);
@@ -162,6 +167,32 @@ export default function Profile() {
                 }
             }
         ]);
+    };
+
+    const handleSaveProfile = async () => {
+        if (!editName.trim()) {
+            Alert.alert("Error", "Name cannot be empty");
+            return;
+        }
+
+        setIsSaving(true);
+
+        try {
+            // 你需要在后端的 updateProfile 接口支持接收 { name } 参数 (稍后会告诉你怎么改后端)
+            await authApi.updateProfile({ name: editName.trim() } as any);
+
+            // 更新本地 Store
+            updateName(editName.trim());
+            setShowEditProfileModal(false);
+            Alert.alert("Success", "Profile updated!");
+
+            // 刷新以更新排行榜中的名字
+            fetchLeaderboard();
+        } catch (error) {
+            Alert.alert("Error", "Failed to update profile");
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const getPreferencesText = () => {
@@ -255,7 +286,13 @@ export default function Profile() {
 
                     <View className="flex-row justify-between items-center mb-6 z-10">
                         <Text className="text-white font-pbold text-2xl">My Profile</Text>
-                        <TouchableOpacity className="bg-white/20 p-2.5 rounded-full backdrop-blur-md">
+                        <TouchableOpacity
+                            onPress={() => {
+                                setEditName(userInfo?.name || ""); // 预填当前名字
+                                setShowEditProfileModal(true);
+                            }}
+                            className="bg-white/20 p-2.5 rounded-full backdrop-blur-md"
+                        >
                             <Ionicons name="pencil" size={20} color="white" />
                         </TouchableOpacity>
                     </View>
@@ -501,6 +538,36 @@ export default function Profile() {
                     </View>
                 </View>
             </Modal>
+
+            <Modal visible={showEditProfileModal} transparent animationType="fade" onRequestClose={() => setShowEditProfileModal(false)}>
+                <View className="flex-1 bg-black/50 justify-center px-6">
+                    <View className="bg-white rounded-3xl p-6">
+                        <View className="flex-row justify-between items-center mb-6">
+                            <Text className="text-xl font-pbold text-slate-800">Edit Profile</Text>
+                            <TouchableOpacity onPress={() => setShowEditProfileModal(false)}>
+                                <Ionicons name="close" size={24} color="#64748b" />
+                            </TouchableOpacity>
+                        </View>
+
+                        <Text className="text-gray-500 font-pmedium mb-2">Display Name</Text>
+                        <TextInput
+                            value={editName}
+                            onChangeText={setEditName}
+                            placeholder="Enter your name"
+                            className="bg-gray-100 p-4 rounded-xl font-pbold text-slate-800 mb-8"
+                            autoFocus
+                        />
+
+                        <TouchableOpacity
+                            onPress={handleSaveProfile}
+                            className="bg-primary py-4 rounded-2xl items-center shadow-sm shadow-green-200"
+                        >
+                            <Text className="text-white font-pbold text-lg">Save Changes</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
+
 
         </View>
     );
