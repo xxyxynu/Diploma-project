@@ -26,6 +26,7 @@ export interface LeaderboardData {
     topUsers: { _id: string, name: string, ecoPoints: number }[];
     myRank: number | string;
     topPercentage: number;
+
 }
 
 export const authApi = {

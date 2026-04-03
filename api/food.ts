@@ -3,7 +3,7 @@ import apiClient from "./config";
 // Type definitions
 export interface FridgeItem {
     _id: string;
-    userId: string;
+    fridgeId: string;
     name: string;
     barcode?: string;
     brand?: string;

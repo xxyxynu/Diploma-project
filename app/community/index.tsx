@@ -37,10 +37,6 @@ export default function CommunityFeed() {
 
     useEffect(() => {
         fetchPosts();
-    }, []);
-
-    useEffect(() => {
-        fetchPosts();
     }, [cityFilter, isNearby, categoryFilter]);
 
     const fetchPosts = async () => {

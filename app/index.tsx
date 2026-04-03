@@ -3,18 +3,20 @@ import { useRouter } from "expo-router";
 import { useEffect } from "react";
 import { Text, View } from "react-native";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
+import * as SecureStore from 'expo-secure-store';
 
 export default function SplashScreen() {
     const router = useRouter();
 
     useEffect(() => {
-        // 模拟加载数据，3秒后跳转到 Onboarding 页面
-        const timer = setTimeout(() => {
-            // 使用 replace 防止用户点返回键回到启动页
-            router.replace("/(auth)/onboarding");
+        const timer = setTimeout(async () => {
+            const token = await SecureStore.getItemAsync("user_token");
+            if (token) {
+                router.replace("/(tabs)"); // 已登录 → 直接进主页
+            } else {
+                router.replace("/(auth)/onboarding"); // 新用户 → 引导页
+            }
         }, 3000);
-
-        return () => clearTimeout(timer);
     }, []);
 
     return (

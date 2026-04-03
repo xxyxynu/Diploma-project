@@ -69,20 +69,27 @@ export default function FoodDetail() {
         Alert.alert("Delete Item", "Is this item wasted or just removed?", [
             { text: "Cancel", style: "cancel" },
             {
-                text: "Just Remove", // 普通删除 (误操作录入时)
+                text: "Just Remove",
                 onPress: async () => {
-                    await foodApi.delete(id as string);
-                    router.back();
+                    try {
+                        await foodApi.delete(id as string);
+                        router.back();
+                    } catch (error) {
+                        Alert.alert("Error", "Failed to remove item. Please try again.");
+                    }
                 }
             },
             {
                 text: "Wasted (Expired)", // 浪费
                 style: "destructive",
                 onPress: async () => {
-                    // ✅ 改为 waste
-                    await foodApi.waste(id as string);
-                    refreshUser(); // 刷新数据
-                    router.back();
+                    try {
+                        await foodApi.waste(id as string);
+                        refreshUser(); // 刷新数据
+                        router.back();
+                    } catch (error) {
+                        Alert.alert("Error", "Failed to mark item as wasted. Please try again.");
+                    }
                 }
             }
         ]);
@@ -234,7 +241,7 @@ export default function FoodDetail() {
                             <View
                                 className="h-full rounded-full"
                                 style={{
-                                    width: days <= 3 ? '80%' : '30%',
+                                    width: `${Math.max(0, Math.min(100, (days / 30) * 100))}%`,
                                     backgroundColor: statusColor
                                 }}
                             />

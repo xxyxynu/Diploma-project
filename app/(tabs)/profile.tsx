@@ -420,6 +420,15 @@ export default function Profile() {
                         <View className="h-[1px] bg-gray-50 mx-4" />
 
                         <MenuItem
+                            icon="calendar-outline"
+                            title="Meal Planner"
+                            subtitle="Weekly meal plan & AI suggestions"
+                            hasArrow
+                            onPress={() => router.push("/meal-plan")}
+                        />
+                        <View className="h-[1px] bg-gray-50 mx-4" />
+
+                        <MenuItem
                             icon="book-outline"
                             title="My CookBook"
                             subtitle="Saved Recipes"

@@ -58,6 +58,10 @@ export default function RootLayout() {
         name="add-manual"
         options={{ title: "Add Item", presentation: "modal" }}
       />
+      <Stack.Screen
+        name="meal-plan/index"
+        options={{ headerShown: false }}
+      />
     </Stack>
   );
 }
