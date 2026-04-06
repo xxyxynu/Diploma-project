@@ -56,7 +56,9 @@
         {
           "locationAlwaysAndWhenInUsePermission": "Allow EcoCart to use your location for finding nearby food sharing opportunities."
         }
-      ]
+      ],
+      "expo-secure-store",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,
