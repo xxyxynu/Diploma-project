@@ -16,22 +16,28 @@ import {
 } from "react-native";
 import { mealPlanApi, MealPlan, Meal } from "../api/mealPlan"; // Import Meal interface
 import { useFridgeStore } from "../store/fridgeStore";
+import { useUserStore } from "../store/userStore";
+import { translations } from "@/i18n/translations";
+import { useNetworkStore } from "@/store/networkStore";
+import Toast from "react-native-toast-message";
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 export default function MealPlanner() {
     const router = useRouter();
     const { selectedFridge } = useFridgeStore();
+    const { language } = useUserStore();
+    const t = translations[language];
 
     const [mealPlan, setMealPlan] = useState<MealPlan | null>(null);
     const [loading, setLoading] = useState(true);
     const [generating, setGenerating] = useState(false);
 
-    // --- 📅 时间与视图状态 ---
+    // --- 时间与视图状态 ---
     const [currentDate, setCurrentDate] = useState(new Date()); // 当前浏览的基准日期 (用于翻页)
     const [activeDay, setActiveDay] = useState('Monday');       // 当前选中的星期几
 
-    // --- ✏️ 编辑状态 ---
+    // --- 编辑状态 ---
     const [editModalVisible, setEditModalVisible] = useState(false);
     const [editingContext, setEditingContext] = useState<{ day: string, type: 'breakfast' | 'lunch' | 'dinner', currentName: string } | null>(null);
     const [editInputValue, setEditInputValue] = useState("");
@@ -41,6 +47,7 @@ export default function MealPlanner() {
     const [selectedMealForDetail, setSelectedMealForDetail] = useState<Meal | null>(null);
     const [detailMealType, setDetailMealType] = useState<'breakfast' | 'lunch' | 'dinner' | null>(null);
 
+    const { isConnected } = useNetworkStore();
 
     useEffect(() => {
         if (!selectedFridge) {
@@ -102,21 +109,35 @@ export default function MealPlanner() {
 
     // AI 生成
     const handleAIGenerate = async () => {
+        if (!isConnected) {
+            Toast.show({ type: 'error', text1: "Offline", text2: "Connection required for AI" });
+            return;
+        }
+
         if (!selectedFridge) return;
         Alert.alert(
-            "AI Chef Generation 👨‍🍳",
-            "Overwrite this week's plan using your fridge inventory?", [
-            { text: "Cancel", style: "cancel" },
+            t.aiChefTitle,
+            t.aiChefDesc, [
+            { text: t.cancel, style: "cancel" },
             {
-                text: "Generate",
+                text: t.generate,
                 onPress: async () => {
                     setGenerating(true);
                     try {
                         const dateStr = currentDate.toISOString().split('T')[0];
-                        const data = await mealPlanApi.generateAI(selectedFridge._id, dateStr);
+                        const data = await mealPlanApi.generateAI(selectedFridge._id, dateStr, language);
                         setMealPlan(data);
+
+                        Toast.show({
+                            type: 'success',
+                            text1: t.aiPlanSuccess,
+                        });
                     } catch (error) {
-                        Alert.alert("Error", "Chef AI is busy.");
+                        Toast.show({
+                            type: 'error',
+                            text1: t.detailError,
+                            text2: t.chefAiBusy
+                        });
                     } finally {
                         setGenerating(false);
                     }
@@ -128,6 +149,11 @@ export default function MealPlanner() {
 
     // 保存编辑
     const handleSaveEdit = async () => {
+        if (!isConnected) {
+            Toast.show({ type: 'error', text1: "Offline" });
+            return;
+        }
+
         if (!editingContext || !selectedFridge) return;
         try {
             const dateStr = currentDate.toISOString().split('T')[0];
@@ -137,8 +163,14 @@ export default function MealPlanner() {
             );
             setMealPlan(updatedPlan);
             setEditModalVisible(false);
+
+            Toast.show({
+                type: 'success',
+                text1: t.mealPlanUpdated,
+                position: 'bottom'
+            });
         } catch (error) {
-            Alert.alert("Error", "Failed to update meal");
+            Toast.show({ type: 'error', text1: t.detailError });
         }
     };
 
@@ -179,7 +211,7 @@ export default function MealPlanner() {
                     </View>
                     <View className="flex-1">
                         <View className="flex-row items-center justify-between">
-                            <Text className="text-gray-400 font-pbold text-xs uppercase tracking-wider mb-1">{type}</Text>
+                            <Text className="text-gray-400 font-pbold text-xs uppercase tracking-wider mb-1">{t.mealTypes[type]}</Text>
                             {/* 🆕 AI 标签 */}
                             {isAI && (
                                 <View className="bg-purple-100 px-2 py-0.5 rounded-md flex-row items-center">
@@ -217,7 +249,7 @@ export default function MealPlanner() {
         return (
             <View className="flex-1 bg-gray-50 items-center justify-center p-6">
                 <MaterialCommunityIcons name="fridge-off-outline" size={80} color="#9CA3AF" />
-                <Text className="text-xl font-pbold text-gray-800 mt-4 mb-2">No Fridge Selected</Text>
+                <Text className="text-xl font-pbold text-gray-800 mt-4 mb-2">{t.noFridgeSelected}</Text>
                 <TouchableOpacity onPress={() => router.back()} className="mt-2"><Text className="text-blue-500 font-pbold">Go Back</Text></TouchableOpacity>
             </View>
         );
@@ -229,7 +261,8 @@ export default function MealPlanner() {
         const day = d.getDay();
         const diff = d.getDate() - day + (day === 0 ? -6 : 1);
         const monday = new Date(d.setDate(diff));
-        return `Week of ${monday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+        const dateStr = monday.toLocaleDateString(t.dateLocale, { month: 'short', day: 'numeric' });
+        return t.weekOf(dateStr);
     };
 
     return (
@@ -240,7 +273,7 @@ export default function MealPlanner() {
                     <TouchableOpacity onPress={() => router.back()} className="p-1">
                         <Ionicons name="arrow-back" size={26} color="white" />
                     </TouchableOpacity>
-                    <Text className="text-white text-xl font-pbold">Meal Planner</Text>
+                    <Text className="text-white text-xl font-pbold">{t.mealPlanner}</Text>
                     <View style={{ width: 28 }} />
                 </View>
 
@@ -277,7 +310,7 @@ export default function MealPlanner() {
                                 className={`items-center px-4 py-2 rounded-2xl ${isActive ? 'bg-emerald-50 border border-emerald-200' : 'bg-transparent'}`}
                             >
                                 <Text className={`text-[10px] font-bold mb-1 ${isActive ? 'text-emerald-600' : 'text-gray-400'}`}>
-                                    {day.substring(0, 3).toUpperCase()}
+                                    {t.days[day as keyof typeof t.days].toUpperCase()}
                                 </Text>
                                 <Text className={`text-lg font-pbold ${isActive ? 'text-emerald-800' : 'text-slate-800'}`}>
                                     {getDateForDayIndex(index).split(' ')[1]}
@@ -301,11 +334,11 @@ export default function MealPlanner() {
             ) : (
                 <ScrollView className="flex-1 px-6 pt-6" contentContainerStyle={{ paddingBottom: 100 }}>
                     <View className="flex-row justify-between items-end mb-6">
-                        <Text className="text-xl font-pbold text-slate-800">{activeDay}</Text>
+                        <Text className="text-xl font-pbold text-slate-800">{t.days[activeDay as keyof typeof t.days]}</Text>
                         {/* 每天独立的小统计 */}
                         {mealPlan?.plan[activeDay] && (
                             <Text className="text-xs text-gray-400 font-bold">
-                                {MEALS.filter(m => mealPlan.plan[activeDay][m]?.recipeName).length} / 3 Planned
+                                {t.plannedCount(MEALS.filter(m => mealPlan.plan[activeDay][m]?.recipeName).length)}
                             </Text>
                         )}
                     </View>
@@ -329,8 +362,8 @@ export default function MealPlanner() {
                 <View className="absolute inset-0 bg-black/50 items-center justify-center z-50">
                     <View className="bg-white p-8 rounded-3xl items-center shadow-2xl">
                         <ActivityIndicator size="large" color="#10B981" />
-                        <Text className="text-slate-800 font-pbold mt-4 text-xl">AI is planning...</Text>
-                        <Text className="text-gray-500 text-sm mt-2 text-center w-48">Scanning fridge inventory and generating 21 meals</Text>
+                        <Text className="text-slate-800 font-pbold mt-4 text-xl">{t.aiPlanning}</Text>
+                        <Text className="text-gray-500 text-sm mt-2 text-center w-48">{t.aiScanningDesc}</Text>
                     </View>
                 </View>
             )}
@@ -345,18 +378,20 @@ export default function MealPlanner() {
                 >
                     <View className="bg-white w-full rounded-t-[30px] p-6 pb-10">
                         <View className="flex-row justify-between items-center mb-6">
-                            <Text className="text-xl font-pbold text-slate-800 capitalize">{editingContext?.type} Plan</Text>
+                            <Text className="text-xl font-pbold text-slate-800 capitalize">
+                                {editingContext ? t.mealTypePlan(t.mealTypes[editingContext.type]) : ''}
+                            </Text>
                             <TouchableOpacity onPress={() => setEditModalVisible(false)}>
                                 <Ionicons name="close" size={24} color="#64748b" />
                             </TouchableOpacity>
                         </View>
 
-                        <Text className="text-gray-500 mb-2 font-pmedium">What are you having?</Text>
+                        <Text className="text-gray-500 mb-2 font-pmedium">{t.whatAreYouHaving}</Text>
                         <TextInput
                             className="bg-gray-100 p-4 rounded-xl font-pmedium text-gray-800 mb-6 text-lg"
                             value={editInputValue}
                             onChangeText={setEditInputValue}
-                            placeholder="e.g. Avocado Toast"
+                            placeholder={t.mealEditPlaceholder}
                             autoFocus
                         />
 
@@ -365,13 +400,13 @@ export default function MealPlanner() {
                                 onPress={() => { handleClearMeal(); handleSaveEdit(); }} // 清空输入框并保存
                                 className="flex-1 py-4 bg-red-50 border border-red-100 rounded-2xl items-center"
                             >
-                                <Text className="text-red-600 text-lg font-bold">Clear</Text>
+                                <Text className="text-red-600 text-base font-bold">{t.clear}</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 onPress={handleSaveEdit}
                                 className="flex-[2] py-4 bg-emerald-500 rounded-2xl items-center shadow-md shadow-emerald-200"
                             >
-                                <Text className="text-white font-pbold text-lg">Save Plan</Text>
+                                <Text className="text-white font-pbold text-lg">{t.savePlan}</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -383,7 +418,7 @@ export default function MealPlanner() {
                 <View style={styles.modalOverlay}>
                     <View style={styles.detailModalContainer}>
                         <View className="flex-row justify-between items-center mb-6">
-                            <Text className="text-xl font-pbold text-slate-800 capitalize">{detailMealType}</Text>
+                            <Text className="text-xl font-pbold text-slate-800 capitalize">{detailMealType ? t.mealTypes[detailMealType] : ''}</Text>
                             <TouchableOpacity onPress={() => setDetailModalVisible(false)}>
                                 <Ionicons name="close" size={28} color="#64748b" />
                             </TouchableOpacity>
@@ -396,13 +431,13 @@ export default function MealPlanner() {
                                 {selectedMealForDetail.isAiGenerated && (
                                     <View className="bg-purple-50 px-3 py-1.5 rounded-xl flex-row items-center self-start mb-4">
                                         <MaterialCommunityIcons name="robot-outline" size={16} color="#9333EA" />
-                                        <Text className="text-purple-700 text-sm font-bold ml-2">AI-Generated</Text>
+                                        <Text className="text-purple-700 text-sm font-bold ml-2">{t.aiGenerated}</Text>
                                     </View>
                                 )}
 
                                 {selectedMealForDetail.ingredients.length > 0 && (
                                     <View className="mb-6">
-                                        <Text className="text-lg font-pbold text-gray-700 mb-3">Ingredients</Text>
+                                        <Text className="text-lg font-pbold text-gray-700 mb-3">{t.ingredients}</Text>
                                         {selectedMealForDetail.ingredients.map((ingredient, index) => (
                                             <View key={index} className="flex-row items-center mb-2">
                                                 <View className="w-2 h-2 bg-emerald-500 rounded-full mr-2" />
@@ -414,8 +449,7 @@ export default function MealPlanner() {
 
                                 {/* TODO: If you fetch full recipe details (e.g., instructions) from another API or store them, display them here */}
                                 <Text className="text-base text-gray-500 italic mt-4">
-                                    Full instructions for this recipe are not available in the current plan.
-                                    You can search for "{selectedMealForDetail.recipeName}" online!
+                                    {t.recipeNoInstructions(selectedMealForDetail.recipeName)}
                                 </Text>
                             </ScrollView>
                         )}
@@ -430,7 +464,7 @@ export default function MealPlanner() {
                             }}
                             className="mt-6 py-4 bg-blue-500 rounded-2xl items-center shadow-md shadow-blue-200"
                         >
-                            <Text className="text-white font-pbold text-lg">Edit Meal</Text>
+                            <Text className="text-white font-pbold text-lg">{t.editMeal}</Text>
                         </TouchableOpacity>
                     </View>
                 </View>

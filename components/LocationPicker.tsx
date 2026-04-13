@@ -5,16 +5,19 @@ import {
     ActivityIndicator,
     Alert,
     Dimensions,
-    KeyboardAvoidingView, // 🆕
+    KeyboardAvoidingView,
     Modal,
-    Platform,             // 🆕
-    ScrollView,           // 🆕
+    Platform,
+    ScrollView,
     Text,
     TextInput,
     TouchableOpacity,
     View
 } from "react-native";
 import MapView, { Circle, Marker } from 'react-native-maps';
+import { useUserStore } from "../store/userStore";
+import { translations } from "../i18n/translations";
+import Toast from "react-native-toast-message";
 
 const { width, height } = Dimensions.get('window');
 
@@ -33,25 +36,35 @@ interface LocationPickerProps {
 }
 
 export const LocationPicker = ({ visible, onClose, onSelect, initialCity = 'Almaty' }: LocationPickerProps) => {
+    const { language } = useUserStore();
+    const t = translations[language];
+
     const [loading, setLoading] = useState(false);
     const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
     const [selectedLocation, setSelectedLocation] = useState<{ latitude: number; longitude: number } | null>(null);
 
-    // Form fields
     const [city, setCity] = useState(initialCity);
     const [district, setDistrict] = useState('');
     const [publicDescription, setPublicDescription] = useState('');
     const [exactAddress, setExactAddress] = useState('');
     const [shareExactAddress, setShareExactAddress] = useState(false);
 
-    // City centers for Kazakhstan
     const CITY_COORDS: Record<string, { latitude: number; longitude: number }> = {
         'Almaty': { latitude: 43.2220, longitude: 76.8512 },
         'Astana': { latitude: 51.1694, longitude: 71.4491 },
         'Shymkent': { latitude: 42.3417, longitude: 69.5901 },
         'Karaganda': { latitude: 49.8047, longitude: 73.1094 },
+        'Aktobe': { latitude: 50.2839, longitude: 57.1661 },
         'Aktau': { latitude: 43.6508, longitude: 51.1601 },
-        'Atyrau': { latitude: 47.1164, longitude: 51.8834 }
+        'Atyrau': { latitude: 47.1164, longitude: 51.8834 },
+        'Pavlodar': { latitude: 52.2870, longitude: 76.9675 },
+        'Semey': { latitude: 50.4117, longitude: 80.2328 },
+        'Kostanay': { latitude: 53.2194, longitude: 63.6311 },
+        'Taraz': { latitude: 42.9000, longitude: 71.3661 },
+        'Kyzylorda': { latitude: 44.8500, longitude: 65.4833 },
+        'Zhezkazgan': { latitude: 47.7972, longitude: 67.7147 },
+        'Petropavl': { latitude: 54.8750, longitude: 69.1708 },
+        'Other': { latitude: 48.0196, longitude: 66.9237 },
     };
 
     useEffect(() => {
@@ -69,10 +82,11 @@ export const LocationPicker = ({ visible, onClose, onSelect, initialCity = 'Alma
                 const cityCenter = CITY_COORDS[city] || CITY_COORDS['Almaty'];
                 setUserLocation(cityCenter);
                 setSelectedLocation(cityCenter);
-                Alert.alert(
-                    'Location Permission',
-                    'Please enable location to auto-detect your position, or select manually on the map.'
-                );
+                Toast.show({
+                    type: 'info',
+                    text1: t.locationPermission || 'Location Permission',
+                    text2: t.locationPermissionSub,
+                });
             } else {
                 const location = await Location.getCurrentPositionAsync({});
                 const coords = {
@@ -81,6 +95,13 @@ export const LocationPicker = ({ visible, onClose, onSelect, initialCity = 'Alma
                 };
                 setUserLocation(coords);
                 setSelectedLocation(coords);
+
+                Toast.show({
+                    type: 'success',
+                    text1: t.locationDetected,
+                    position: 'bottom',
+                    visibilityTime: 2000
+                });
             }
         } catch (error) {
             const cityCenter = CITY_COORDS[city] || CITY_COORDS['Almaty'];
@@ -97,12 +118,20 @@ export const LocationPicker = ({ visible, onClose, onSelect, initialCity = 'Alma
 
     const handleConfirm = () => {
         if (!selectedLocation) {
-            Alert.alert('Error', 'Please select a location on the map');
+            Toast.show({
+                type: 'error',
+                text1: t.detailError,
+                text2: t.selectLocationOnMap
+            });
             return;
         }
 
         if (!publicDescription.trim()) {
-            Alert.alert('Error', 'Please enter a public location description');
+            Toast.show({
+                type: 'error',
+                text1: t.detailError,
+                text2: t.enterPublicDescription
+            });
             return;
         }
 
@@ -125,28 +154,25 @@ export const LocationPicker = ({ visible, onClose, onSelect, initialCity = 'Alma
                     <TouchableOpacity onPress={onClose}>
                         <Ionicons name="close" size={28} color="white" />
                     </TouchableOpacity>
-                    <Text className="text-white text-lg font-pbold">Select Location</Text>
+                    <Text className="text-white text-lg font-pbold">{t.selectLocationTitle || "Select Location"}</Text>
                     <TouchableOpacity onPress={handleConfirm}>
-                        <Text className="text-white font-pbold text-lg">Done</Text>
+                        <Text className="text-white font-pbold text-lg">{t.doneBtn || "Done"}</Text>
                     </TouchableOpacity>
                 </View>
 
-                {/* 🆕 KeyboardAvoidingView 防止键盘遮挡 */}
                 <KeyboardAvoidingView
                     behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                     style={{ flex: 1 }}
                 >
-                    {/* 🆕 ScrollView 包裹整个内容区 */}
                     <ScrollView
                         className="flex-1"
                         contentContainerStyle={{ paddingBottom: 40 }}
                         keyboardShouldPersistTaps="handled"
                     >
-                        {/* Map */}
                         {loading ? (
                             <View className="h-80 items-center justify-center bg-gray-100">
                                 <ActivityIndicator size="large" color="#9333ea" />
-                                <Text className="text-gray-500 mt-4">Loading map...</Text>
+                                <Text className="text-gray-500 mt-4">{t.loadingMap || "Loading map..."}</Text>
                             </View>
                         ) : selectedLocation ? (
                             <View>
@@ -162,7 +188,7 @@ export const LocationPicker = ({ visible, onClose, onSelect, initialCity = 'Alma
                                 >
                                     <Marker
                                         coordinate={selectedLocation}
-                                        title="Pick-up Location"
+                                        title={t.pickupLocation || "Pick-up Location"}
                                         pinColor="#9333ea"
                                     />
                                     <Circle
@@ -178,18 +204,16 @@ export const LocationPicker = ({ visible, onClose, onSelect, initialCity = 'Alma
                                     <View className="flex-row items-start">
                                         <Ionicons name="shield-checkmark" size={20} color="#3B82F6" />
                                         <View className="flex-1 ml-2">
-                                            <Text className="text-blue-900 font-pbold text-sm">Privacy Protected</Text>
+                                            <Text className="text-blue-900 font-pbold text-sm">{t.privacyProtected || "Privacy Protected"}</Text>
                                             <Text className="text-blue-700 text-xs mt-1">
-                                                Your exact location will be hidden. Others see approximate area (~500m radius).
+                                                {t.privacyProtectedSub || "Your exact location will be hidden. Others see approximate area (~500m radius)."}
                                             </Text>
                                         </View>
                                     </View>
                                 </View>
 
-                                {/* Form Fields */}
                                 <View className="px-6 pt-4">
-                                    {/* City Selector */}
-                                    <Text className="text-gray-700 font-pmedium mb-2">City *</Text>
+                                    <Text className="text-gray-700 font-pmedium mb-2">{t.locationCity || "City *"}</Text>
                                     <View className="flex-row flex-wrap gap-2 mb-4">
                                         {Object.keys(CITY_COORDS).map(cityName => (
                                             <TouchableOpacity
@@ -205,33 +229,31 @@ export const LocationPicker = ({ visible, onClose, onSelect, initialCity = 'Alma
                                                     }`}
                                             >
                                                 <Text className={city === cityName ? 'text-white font-bold' : 'text-gray-600'}>
-                                                    {cityName}
+                                                    {t.cities[cityName as keyof typeof t.cities] || cityName}
                                                 </Text>
                                             </TouchableOpacity>
                                         ))}
                                     </View>
 
-                                    {/* Public Description */}
+                                    {/* 🆕 翻译公共地标 */}
                                     <Text className="text-gray-700 font-pmedium mb-2">
-                                        Public Landmark *
+                                        {t.publicLandmark || "Public Landmark *"}
                                     </Text>
                                     <TextInput
                                         className="bg-gray-100 px-4 py-3 rounded-xl mb-4 text-gray-800"
-                                        placeholder="e.g., Near Green Bazaar"
+                                        placeholder={t.placeholderLandmark || "e.g., Near Green Bazaar"}
                                         value={publicDescription}
                                         onChangeText={setPublicDescription}
                                     />
 
-                                    {/* District (Optional) */}
-                                    <Text className="text-gray-700 font-pmedium mb-2">District (optional)</Text>
+                                    <Text className="text-gray-700 font-pmedium mb-2">{t.districtLabel || "District (optional)"}</Text>
                                     <TextInput
                                         className="bg-gray-100 px-4 py-3 rounded-xl mb-4 text-gray-800"
-                                        placeholder="e.g., Medeu District"
+                                        placeholder={t.placeholderDistrict || "e.g., Medeu District"}
                                         value={district}
                                         onChangeText={setDistrict}
                                     />
 
-                                    {/* Exact Address Toggle */}
                                     <TouchableOpacity
                                         onPress={() => setShareExactAddress(!shareExactAddress)}
                                         className="flex-row items-center mb-2"
@@ -240,20 +262,19 @@ export const LocationPicker = ({ visible, onClose, onSelect, initialCity = 'Alma
                                             }`}>
                                             {shareExactAddress && <Ionicons name="checkmark" size={14} color="white" />}
                                         </View>
-                                        <Text className="text-gray-700 font-pmedium">Share exact address (privately)</Text>
+                                        <Text className="text-gray-700 font-pmedium">{t.shareExactAddressLabel || "Share exact address (privately)"}</Text>
                                     </TouchableOpacity>
 
                                     {shareExactAddress && (
                                         <TextInput
                                             className="bg-gray-100 px-4 py-3 rounded-xl mb-4 text-gray-800"
-                                            placeholder="Street address, building number..."
+                                            placeholder={t.placeholderExactAddress || "Street address, building number..."}
                                             value={exactAddress}
                                             onChangeText={setExactAddress}
                                             multiline
                                         />
                                     )}
 
-                                    {/* 底部留白，防止被键盘顶死 */}
                                     <View className="h-20" />
                                 </View>
                             </View>

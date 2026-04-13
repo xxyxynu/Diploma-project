@@ -36,9 +36,9 @@ export const mealPlanApi = {
         return response.data;
     },
 
-    generateAI: async (fridgeId: string, dateStr: string) => {
+    generateAI: async (fridgeId: string, dateStr: string, language: string) => {
         const response = await apiClient.post<MealPlan>("/meal-plan/generate", {
-            fridgeId, date: dateStr
+            fridgeId, date: dateStr, language
         });
         return response.data;
     }

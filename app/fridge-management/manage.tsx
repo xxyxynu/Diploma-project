@@ -1,65 +1,55 @@
 import { Ionicons } from "@expo/vector-icons";
-import * as Clipboard from 'expo-clipboard';
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import { Alert, FlatList, Share, Text, TouchableOpacity, View } from "react-native";
 import { fridgeApi } from "../../api/fridge";
+import { translations } from "../../i18n/translations";
 import { useFridgeStore } from "../../store/fridgeStore";
 import { useUserStore } from "../../store/userStore";
+import Toast from "react-native-toast-message";
 
 export default function ManageFridges() {
     const router = useRouter();
-    const { fridges, removeFridge, selectedFridge, setSelectedFridge } = useFridgeStore();
-    const { userInfo } = useUserStore();
+    const { fridges, removeFridge, selectedFridge } = useFridgeStore();
+    const { userInfo, language } = useUserStore();
+    const t = translations[language];
+
     const [loading, setLoading] = useState(false);
 
-    // 生成邀请码
     const handleInvite = async (fridgeId: string, fridgeName: string) => {
         try {
-            // 先请求后端生成/获取 Code
             const data = await fridgeApi.generateInviteCode(fridgeId);
             const code = data.inviteCode;
 
-            // 调用系统原生分享
-            const result = await Share.share({
-                message: `Hey! Join my fridge "${fridgeName}" on EcoCart using this invite code: ${code}`,
-                // iOS 可以在这里加个 url，比如 App Store 链接
-                // url: 'https://ecocart.app', 
-                title: 'Join my Fridge' // Android 标题
+            await Share.share({
+                message: `${t.joinMyFridge(fridgeName)} ${code}`,
+                title: t.shareInviteTitle
             });
 
-            if (result.action === Share.sharedAction) {
-                if (result.activityType) {
-                    // shared with activity type of result.activityType (iOS)
-                    console.log("Shared via", result.activityType);
-                } else {
-                    // shared
-                    console.log("Shared successfully");
-                }
-            } else if (result.action === Share.dismissedAction) {
-                // dismissed
-                console.log("Share dismissed");
-            }
+            Toast.show({
+                type: 'success',
+                text1: t.invite,
+                text2: t.postSuccess
+            });
         } catch (error) {
-            Alert.alert("Error", "Failed to share code");
+            Toast.show({
+                type: 'error',
+                text1: t.detailError,
+                text2: t.failedShareCode
+            });
         }
     };
 
-    // 退出或删除
     const handleLeaveOrDelete = async (fridge: any) => {
-        // 判断当前用户是不是 Owner
-        // 注意：根据你的 Interface，ownerId 是个对象 {_id, name...}
         const isOwner = fridge.ownerId._id === userInfo?._id;
 
         Alert.alert(
-            isOwner ? "Delete Fridge" : "Leave Fridge",
-            isOwner
-                ? "Are you sure? This will delete all items for everyone."
-                : "Are you sure you want to leave?",
+            isOwner ? t.deleteFridgeTitle : t.leaveFridge,
+            isOwner ? t.deleteAllWarning : t.leaveConfirm,
             [
-                { text: "Cancel", style: "cancel" },
+                { text: t.cancel, style: "cancel" },
                 {
-                    text: isOwner ? "Delete" : "Leave",
+                    text: isOwner ? t.delete : t.leaveFridge,
                     style: "destructive",
                     onPress: async () => {
                         setLoading(true);
@@ -69,11 +59,18 @@ export default function ManageFridges() {
                             } else {
                                 await fridgeApi.leaveFridge(fridge._id);
                             }
-                            // 更新 Store
                             removeFridge(fridge._id);
-                            Alert.alert("Success", isOwner ? "Fridge deleted" : "Left fridge");
+                            Toast.show({
+                                type: 'success',
+                                text1: t.postSuccess,
+                                text2: isOwner ? t.fridgeDeleted : t.leftFridge
+                            });
                         } catch (error: any) {
-                            Alert.alert("Error", error.response?.data?.message || "Action failed");
+                            Toast.show({
+                                type: 'error',
+                                text1: t.detailError,
+                                text2: error.response?.data?.message || t.actionFailed
+                            });
                         } finally {
                             setLoading(false);
                         }
@@ -98,40 +95,44 @@ export default function ManageFridges() {
                             <Text className="font-pbold text-lg text-gray-800 mr-2">{item.name}</Text>
                             {isSelected && (
                                 <View className="bg-green-100 px-2 py-0.5 rounded-md">
-                                    <Text className="text-green-700 text-[10px] font-bold">CURRENT</Text>
+                                    <Text className="text-green-700 text-[10px] font-bold">
+                                        {t.currentBadge}
+                                    </Text>
                                 </View>
                             )}
                         </View>
                         <Text className="text-gray-500 text-xs">
-                            {isOwner ? "You are the Owner" : `Owner: ${item.ownerId.name}`}
+                            {isOwner ? t.youAreOwner : t.ownerLabel(item.ownerId.name)}
                         </Text>
                     </View>
                 </View>
 
-                {/* 分割线 */}
                 <View className="h-[1px] bg-gray-100 mb-3" />
 
-                {/* 操作按钮 */}
                 <View className="flex-row justify-end gap-3">
-                    {/* 只有 Owner 可以邀请 */}
+                    {/* Invite — owner only */}
                     {isOwner && (
                         <TouchableOpacity
                             onPress={() => handleInvite(item._id, item.name)}
                             className="flex-row items-center bg-blue-50 px-4 py-2 rounded-lg"
                         >
                             <Ionicons name="share-social-outline" size={18} color="#2563EB" />
-                            <Text className="text-blue-600 font-pbold text-xs ml-1">Invite</Text>
+                            <Text className="text-blue-600 font-pbold text-xs ml-1">{t.invite}</Text>
                         </TouchableOpacity>
                     )}
 
-                    {/* 退出/删除 按钮 */}
+                    {/* Leave / Delete */}
                     <TouchableOpacity
                         onPress={() => handleLeaveOrDelete(item)}
                         className="flex-row items-center bg-red-50 px-4 py-2 rounded-lg"
                     >
-                        <Ionicons name={isOwner ? "trash-outline" : "exit-outline"} size={18} color="#DC2626" />
+                        <Ionicons
+                            name={isOwner ? "trash-outline" : "exit-outline"}
+                            size={18}
+                            color="#DC2626"
+                        />
                         <Text className="text-red-600 font-pbold text-xs ml-1">
-                            {isOwner ? "Delete" : "Leave"}
+                            {isOwner ? t.delete : t.leaveFridge}
                         </Text>
                     </TouchableOpacity>
                 </View>
@@ -147,7 +148,7 @@ export default function ManageFridges() {
                     <TouchableOpacity onPress={() => router.back()}>
                         <Ionicons name="arrow-back" size={28} color="black" />
                     </TouchableOpacity>
-                    <Text className="text-xl font-pbold text-slate-800">Manage Fridges</Text>
+                    <Text className="text-xl font-pbold text-slate-800">{t.manageFridgesTitle}</Text>
                     <View style={{ width: 28 }} />
                 </View>
             </View>
@@ -158,7 +159,7 @@ export default function ManageFridges() {
                 keyExtractor={item => item._id}
                 contentContainerStyle={{ padding: 24 }}
                 ListEmptyComponent={
-                    <Text className="text-center text-gray-400 mt-10">No fridges found.</Text>
+                    <Text className="text-center text-gray-400 mt-10">{t.noFridgesFound}</Text>
                 }
             />
         </View>

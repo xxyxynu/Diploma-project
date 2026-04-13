@@ -16,10 +16,19 @@ import {
 } from "react-native";
 import { foodApi } from "../api/food";
 import { useFridgeStore } from "../store/fridgeStore";
+import { useUserStore } from "../store/userStore";
+import { translations } from "../i18n/translations";
+import { useNetworkStore } from "../store/networkStore";
+import Toast from "react-native-toast-message";
+
 export default function AddManual() {
     const router = useRouter();
     const params = useLocalSearchParams();
     const { selectedFridge } = useFridgeStore();
+    const { isConnected } = useNetworkStore();
+
+    const { language } = useUserStore();
+    const t = translations[language];
 
     // 🆕 判断是否为编辑模式
     const isEditing = !!params.id;
@@ -47,18 +56,28 @@ export default function AddManual() {
 
     // 📷 图片选择逻辑 (新增)
     const pickImage = async () => {
-        const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,
-            aspect: [4, 3],
-            quality: 0.5,
-            base64: true, // ⚠️ 必须开启，用于上传到 Cloudinary
-        });
+        try {
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                allowsEditing: true,
+                aspect: [4, 3],
+                quality: 0.5,
+                base64: true, // ⚠️ 必须开启，用于上传到 Cloudinary
+            });
 
-        if (!result.canceled && result.assets[0].base64) {
-            // 构造 Base64 字符串
-            const base64Img = `data:image/jpeg;base64,${result.assets[0].base64}`;
-            setFormData(prev => ({ ...prev, imageUrl: base64Img }));
+            if (!result.canceled && result.assets[0].base64) {
+                // 构造 Base64 字符串
+                const base64Img = `data:image/jpeg;base64,${result.assets[0].base64}`;
+                setFormData(prev => ({ ...prev, imageUrl: base64Img }));
+
+                Toast.show({
+                    type: 'success',
+                    text1: t.imageSelected,
+                    position: 'bottom'
+                });
+            }
+        } catch (e) {
+            Toast.show({ type: 'error', text1: t.detailError });
         }
     };
 
@@ -79,13 +98,26 @@ export default function AddManual() {
 
     // 保存逻辑
     const handleSave = async () => {
+        if (!isConnected) {
+            Toast.show({
+                type: 'error',
+                text1: "Offline",
+                text2: "Please check your internet connection."
+            });
+            return;
+        }
+
         if (!formData.name || !formData.expiryDate) {
-            Alert.alert("Missing Info", "Please enter product name and expiry date.");
+            Toast.show({
+                type: 'error',
+                text1: t.missingInfo,
+                text2: t.fillRequiredFields
+            });
             return;
         }
 
         if (!isEditing && !selectedFridge) {
-            Alert.alert("Error", "No fridge selected.");
+            Toast.show({ type: 'error', text1: t.detailError, text2: t.noFridgeSelected });
             return;
         }
 
@@ -107,9 +139,13 @@ export default function AddManual() {
             if (isEditing) {
                 // Update
                 await foodApi.update(itemId, payload);
-                Alert.alert("Updated", "Item updated successfully!", [
-                    { text: "OK", onPress: () => router.back() }
-                ]);
+                Toast.show({
+                    type: 'success',
+                    text1: t.updated,
+                    text2: t.itemUpdated,
+                });
+
+                router.back();
             } else {
                 // Create
                 await foodApi.create({
@@ -117,13 +153,22 @@ export default function AddManual() {
                     fridgeId: selectedFridge!._id,
                     barcode: formData.barcode
                 });
-                Alert.alert("Success", "Item added to your fridge!", [
-                    { text: "OK", onPress: () => router.replace("/(tabs)/fridge") }
-                ]);
+
+                Toast.show({
+                    type: 'success',
+                    text1: t.postSuccess,
+                    text2: t.itemAddedSuccess,
+                });
+
+                router.replace("/(tabs)/fridge");
             }
 
         } catch (error: any) {
-            Alert.alert("Error", error.response?.data?.message || "Failed to save item");
+            Toast.show({
+                type: 'error',
+                text1: t.saveError,
+                text2: error.response?.data?.message || t.actionFailed
+            });
         } finally {
             setLoading(false);
         }
@@ -138,7 +183,7 @@ export default function AddManual() {
                         <Ionicons name="arrow-back" size={28} color="white" />
                     </TouchableOpacity>
                     <Text className="text-white text-xl font-pbold">
-                        {isEditing ? "Edit Item" : "Add to Fridge"}
+                        {isEditing ? t.editItemTitle : t.addManualTitle}
                     </Text>
                     <View style={{ width: 28 }} />
                 </View>
@@ -146,7 +191,7 @@ export default function AddManual() {
 
             <ScrollView className="flex-1 px-6 pt-6" contentContainerStyle={{ paddingBottom: 50 }}>
 
-                {/* 📷 图片上传区域 (优化 UI) */}
+                {/* 图片上传区域 (优化 UI) */}
                 <TouchableOpacity
                     onPress={pickImage}
                     className="w-full h-40 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 items-center justify-center mb-6 overflow-hidden"
@@ -160,35 +205,39 @@ export default function AddManual() {
                             />
                             {/* 覆盖层提示可以修改 */}
                             <View className="absolute bottom-2 right-2 bg-black/50 px-2 py-1 rounded-md">
-                                <Text className="text-white text-xs font-pbold">Change</Text>
+                                <Text className="text-white text-xs font-pbold">{t.change ?? "Change"}</Text>
                             </View>
                         </>
                     ) : (
                         <View className="items-center">
-                            <Ionicons name="camera-outline" size={32} color="#9CA3AF" />
-                            <Text className="text-gray-400 font-pmedium mt-2">Add Photo</Text>
+                            <Ionicons name="camera" size={36} color="gray" />
+                            <Text className="text-gray-500 mt-2">{t.addPhoto}</Text>
                         </View>
                     )}
                 </TouchableOpacity>
 
                 {/* 表单字段 */}
                 <FormField
-                    label="Product Name *"
+                    label={t.itemName}
                     value={formData.name}
                     onChangeText={(t: string) => setFormData(p => ({ ...p, name: t }))}
-                    placeholder="e.g. Organic Milk"
+                    placeholder={t.placeholderName}
                 />
 
                 <FormField
-                    label="Brand"
+                    label={t.brandName}
                     value={formData.brand}
                     onChangeText={(t: string) => setFormData(p => ({ ...p, brand: t }))}
-                    placeholder="e.g. Horizon"
                 />
 
                 {/* Category */}
-                <Text className="text-gray-700 font-pmedium mb-2">Category</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-4 flex-row">
+                <Text className="text-gray-700 font-pmedium mb-2">{t.categoryLabel}</Text>
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    className="mb-4"
+                    contentContainerStyle={{ flexDirection: 'row' }}
+                >
                     {['Dairy', 'Fruit', 'Vegetables', 'Meat', 'Grains', 'Beverages', 'Snacks', 'Seafood', 'Other'].map(cat => (
                         <TouchableOpacity
                             key={cat}
@@ -203,7 +252,7 @@ export default function AddManual() {
                                     ? 'text-white font-pbold'
                                     : 'text-gray-500 font-pmedium'
                             }>
-                                {cat}
+                                {t.categories?.[cat as keyof typeof t.categories] ?? cat}
                             </Text>
                         </TouchableOpacity>
                     ))}
@@ -212,15 +261,15 @@ export default function AddManual() {
                 {/* Quantity / Unit / Price Row */}
                 <View className="flex-row gap-4 mb-4">
                     <View className="flex-1">
-                        <FormField label="Qty" value={formData.quantity} keyboardType="numeric" onChangeText={t => setFormData(p => ({ ...p, quantity: t.replace(/[^0-9]/g, '') }))} />
+                        <FormField label={t.quantity} value={formData.quantity} keyboardType="numeric" onChangeText={t => setFormData(p => ({ ...p, quantity: t.replace(/[^0-9]/g, '') }))} />
                     </View>
                     <View className="flex-1">
-                        <FormField label="Unit" value={formData.unit} onChangeText={t => setFormData(p => ({ ...p, unit: t }))} />
+                        <FormField label={t.unit} value={formData.unit} onChangeText={t => setFormData(p => ({ ...p, unit: t }))} />
                     </View>
                     {/* 🆕 价格输入框 */}
                     <View className="flex-1">
                         <FormField
-                            label="Price (₸)"
+                            label={t.price}
                             value={formData.price}
                             keyboardType="numeric"
                             placeholder="0"
@@ -231,17 +280,17 @@ export default function AddManual() {
 
 
                 <DatePickerField
-                    label="Production Date"
+                    label={t.productionDate}
                     date={formData.productionDate}
                     onPress={() => setShowProductionPicker(true)}
-                    placeholder="Optional"
+                    placeholder={t.optional}
                 />
                 {showProductionPicker && (
                     <DateTimePicker value={formData.productionDate || new Date()} onChange={onProductionDateChange} />
                 )}
 
                 <DatePickerField
-                    label="Expiry Date *"
+                    label={t.expiryDate}
                     date={formData.expiryDate}
                     onPress={() => setShowExpiryPicker(true)}
                     required
@@ -251,10 +300,10 @@ export default function AddManual() {
                 )}
 
                 <FormField
-                    label="Notes"
+                    label={t.notes}
                     value={formData.notes}
                     onChangeText={(t: string) => setFormData(p => ({ ...p, notes: t }))}
-                    placeholder="Any details..."
+                    placeholder={t.placeholderNotes}
                     multiline
                 />
 
@@ -268,7 +317,7 @@ export default function AddManual() {
                         <ActivityIndicator color="white" />
                     ) : (
                         <Text className="text-white font-pbold text-lg">
-                            {isEditing ? "Update Item" : "Add to Fridge"}
+                            {isEditing ? t.btnUpdateItem : t.btnAddToFridge}
                         </Text>
                     )}
                 </TouchableOpacity>

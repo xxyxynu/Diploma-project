@@ -9,6 +9,8 @@ import {
     View
 } from "react-native";
 import { useFridgeStore } from "../store/fridgeStore";
+import { useUserStore } from "../store/userStore";
+import { translations } from "../i18n/translations";
 
 interface FridgeSwitcherProps {
     visible: boolean;
@@ -18,6 +20,8 @@ interface FridgeSwitcherProps {
 export const FridgeSwitcher = ({ visible, onClose }: FridgeSwitcherProps) => {
     const router = useRouter();
     const { fridges, selectedFridge, setSelectedFridge } = useFridgeStore();
+    const { language } = useUserStore();
+    const t = translations[language];
 
     const handleSelectFridge = (fridgeId: string) => {
         const fridge = fridges.find(f => f._id === fridgeId);
@@ -60,11 +64,11 @@ export const FridgeSwitcher = ({ visible, onClose }: FridgeSwitcherProps) => {
 
                     {/* Header */}
                     <View className="flex-row items-center justify-between p-6 border-b border-gray-100">
-                        <Text className="text-xl font-pbold text-gray-800">My Fridges</Text>
+                        <Text className="text-xl font-pbold text-gray-800">{t.myFridge}</Text>
 
                         {/* 🆕 修改这里：把关闭按钮换成 Manage 文字，或者在旁边加一个 */}
                         <TouchableOpacity onPress={handleManage}>
-                            <Text className="text-primary font-pbold text-base">Manage</Text>
+                            <Text className="text-primary font-pbold text-base">{t.manage}</Text>
                         </TouchableOpacity>
                     </View>
 
@@ -102,7 +106,7 @@ export const FridgeSwitcher = ({ visible, onClose }: FridgeSwitcherProps) => {
                                                 </Text>
                                                 <View className="flex-row items-center mt-1">
                                                     <Text className="text-xs text-gray-400">
-                                                        {memberCount} members
+                                                        {memberCount} {t.membersCountLabel || "members"}
                                                     </Text>
                                                 </View>
                                             </View>
@@ -123,7 +127,7 @@ export const FridgeSwitcher = ({ visible, onClose }: FridgeSwitcherProps) => {
                                 className="flex-row items-center justify-center bg-primary py-4 rounded-2xl"
                             >
                                 <Ionicons name="add-circle" size={24} color="white" />
-                                <Text className="text-white font-pbold ml-2 text-lg">Create New</Text>
+                                <Text className="text-white font-pbold ml-2 text-lg">{t.createFridge}</Text>
                             </TouchableOpacity>
 
                             <TouchableOpacity
@@ -131,7 +135,7 @@ export const FridgeSwitcher = ({ visible, onClose }: FridgeSwitcherProps) => {
                                 className="flex-row items-center justify-center bg-white border border-gray-200 py-4 rounded-2xl"
                             >
                                 <MaterialCommunityIcons name="qrcode-scan" size={20} color="#64748b" />
-                                <Text className="text-gray-700 font-pbold ml-2 text-lg">Join with Code</Text>
+                                <Text className="text-gray-700 font-pbold ml-2 text-lg">{t.joinWithCode}</Text>
                             </TouchableOpacity>
                         </View>
                     </ScrollView>

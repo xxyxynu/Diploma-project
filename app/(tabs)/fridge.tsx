@@ -18,6 +18,9 @@ import { foodApi, FridgeItem } from "../../api/food";
 import { CategoryIcon } from "../../components/CategoryIcon";
 import { FilterChip } from "../../components/FilterChip";
 import { FoodItemCard } from "../../components/FoodItemCard";
+import { translations } from "@/i18n/translations";
+import { useUserStore } from "@/store/userStore";
+import Toast from "react-native-toast-message";
 
 type FilterType = 'all' | 'fresh' | 'expiring' | 'expired';
 
@@ -33,6 +36,11 @@ export default function Fridge() {
     const [refreshing, setRefreshing] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [activeFilter, setActiveFilter] = useState<FilterType>('all');
+
+    const { language } = useUserStore();
+
+    const t = translations[language];
+
 
     // Fetch data when fridge changes
     useEffect(() => {
@@ -111,10 +119,18 @@ export default function Fridge() {
                     onPress: async () => {
                         try {
                             await foodApi.delete(itemId);
-                            Alert.alert("Success", "Item removed from fridge");
+                            Toast.show({
+                                type: 'success',
+                                text1: t.clearSuccess,
+                                text2: itemName
+                            });
                             fetchData();
                         } catch (error) {
-                            Alert.alert("Error", "Failed to delete item");
+                            Toast.show({
+                                type: 'error',
+                                text1: t.detailError,
+                                text2: t.failedRemoveItem
+                            });
                         }
                     }
                 }
@@ -131,7 +147,7 @@ export default function Fridge() {
         return (
             <View className="flex-1 bg-[#F8F9FA] items-center justify-center">
                 <ActivityIndicator size="large" color="#22C55E" />
-                <Text className="text-gray-500 mt-4 font-pmedium">Loading your fridge...</Text>
+                <Text className="text-gray-500 mt-4 font-pmedium">{t.loadingFridge}</Text>
             </View>
         );
     }
@@ -140,15 +156,15 @@ export default function Fridge() {
         return (
             <View className="flex-1 bg-[#F8F9FA] items-center justify-center p-6">
                 <MaterialCommunityIcons name="fridge-off-outline" size={80} color="#9CA3AF" />
-                <Text className="text-xl font-pbold text-gray-800 mt-4 mb-2">No Fridge Selected</Text>
+                <Text className="text-xl font-pbold text-gray-800 mt-4 mb-2">{t.noFridgeSelected}</Text>
                 <Text className="text-gray-500 text-center mb-6">
-                    Create a new fridge or join an existing one to get started
+                    {t.getStartedFridge}
                 </Text>
                 <TouchableOpacity
                     onPress={() => router.push("/fridge-management/create")}
                     className="bg-primary px-6 py-3 rounded-xl"
                 >
-                    <Text className="text-white font-pbold">Create Fridge</Text>
+                    <Text className="text-white font-pbold">{t.createFridge}</Text>
                 </TouchableOpacity>
             </View>
         );
@@ -160,9 +176,9 @@ export default function Fridge() {
             <View className="bg-primary pt-16 pb-6 px-6 rounded-b-[30px]">
                 <View className="flex-row items-center justify-between mb-4">
                     <View>
-                        <Text className="text-white text-2xl font-pbold">My Fridge</Text>
+                        <Text className="text-white text-2xl font-pbold">{t.myFridge}</Text>
                         <Text className="text-white/80 text-sm font-pmedium mt-1">
-                            {totalItems} {totalItems === 1 ? 'item' : 'items'} total
+                            {t.itemsTotal(totalItems)}
                         </Text>
                     </View>
                     <TouchableOpacity
@@ -183,7 +199,7 @@ export default function Fridge() {
                     <Ionicons name="search" size={20} color="white" />
                     <TextInput
                         className="flex-1 ml-3 text-white font-pregular"
-                        placeholder="Search items..."
+                        placeholder={t.searchItems}
                         placeholderTextColor="rgba(255,255,255,0.6)"
                         value={searchQuery}
                         onChangeText={setSearchQuery}
@@ -205,13 +221,13 @@ export default function Fridge() {
                     contentContainerStyle={{ gap: 8 }}
                 >
                     <FilterChip
-                        label="All"
+                        label={t.all}
                         count={Object.values(itemsByCategory).reduce((sum, items) => sum + items.length, 0)}
                         active={activeFilter === 'all'}
                         onPress={() => setActiveFilter('all')}
                     />
                     <FilterChip
-                        label="Fresh"
+                        label={t.fresh}
                         count={Object.values(itemsByCategory).reduce((sum, items) =>
                             sum + items.filter(i => i.status === 'fresh').length, 0
                         )}
@@ -220,7 +236,7 @@ export default function Fridge() {
                         color="green"
                     />
                     <FilterChip
-                        label="Expiring"
+                        label={t.expiring}
                         count={Object.values(itemsByCategory).reduce((sum, items) =>
                             sum + items.filter(i => i.status === 'expiring').length, 0
                         )}
@@ -229,7 +245,7 @@ export default function Fridge() {
                         color="orange"
                     />
                     <FilterChip
-                        label="Expired"
+                        label={t.expired}
                         count={Object.values(itemsByCategory).reduce((sum, items) =>
                             sum + items.filter(i => i.status === 'expired').length, 0
                         )}
@@ -256,24 +272,20 @@ export default function Fridge() {
                             <MaterialCommunityIcons name="fridge-outline" size={64} color="#9CA3AF" />
                         </View>
                         <Text className="text-xl font-pbold text-gray-800 mb-2">
-                            {searchQuery || activeFilter !== 'all' ? 'No Items Found' : 'Your Fridge is Empty'}
+                            {searchQuery || activeFilter !== 'all'
+                                ? t.emptyState.noItemsFound
+                                : t.emptyState.fridgeEmpty}
                         </Text>
+
+                        {/* 副标题 */}
                         <Text className="text-gray-500 text-center mb-6">
                             {searchQuery
-                                ? 'Try a different search term'
+                                ? t.emptyState.tryDifferentSearch
                                 : activeFilter !== 'all'
-                                    ? `No ${activeFilter} items in your fridge`
-                                    : 'Start by scanning a barcode or adding items manually'
+                                    ? t.emptyState.noStatusItems(activeFilter) // 调用带参函数
+                                    : t.emptyState.startScanning
                             }
                         </Text>
-                        {!searchQuery && activeFilter === 'all' && (
-                            <TouchableOpacity
-                                onPress={() => router.push("/(tabs)/scan")}
-                                className="bg-primary px-6 py-3 rounded-xl"
-                            >
-                                <Text className="text-white font-pbold">Scan Your First Item</Text>
-                            </TouchableOpacity>
-                        )}
                     </View>
                 )}
 
@@ -284,7 +296,7 @@ export default function Fridge() {
                         <View className="flex-row items-center justify-between mb-3 ">
                             <View className="flex-row items-center">
                                 <CategoryIcon category={category} />
-                                <Text className="text-lg font-pbold text-gray-800 ml-2">{category}</Text>
+                                <Text className="text-lg font-pbold text-gray-800 ml-2">{t.categories[category as keyof typeof t.categories] || category}</Text>
                                 <View className="bg-gray-200 px-2 py-0.5 rounded-full ml-2">
                                     <Text className="text-gray-600 text-xs font-bold">
                                         {filteredItems[category].length}

@@ -13,12 +13,17 @@ import {
 } from "react-native";
 import { notificationApi, NotificationItem } from "../api/notification";
 import { WeeklyReportModal } from "../components/WeeklyReportModal";
+import { translations } from "../i18n/translations";
+import { useUserStore } from "../store/userStore";
+import Toast from "react-native-toast-message";
 
 export default function NotificationsScreen() {
     const router = useRouter();
     const [notifications, setNotifications] = useState<NotificationItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const { language } = useUserStore();
+    const t = translations[language];
 
     // Modal State
     const [reportVisible, setReportVisible] = useState(false);
@@ -44,27 +49,37 @@ export default function NotificationsScreen() {
         try {
             await notificationApi.markAllRead();
             setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+            Toast.show({
+                type: 'success',
+                text1: t.allReadSuccess,
+            });
         } catch (error) {
-            console.error("Failed to mark all read");
+            Toast.show({ type: 'error', text1: t.detailError });
         }
     };
 
     const handleClearAll = async () => {
         if (notifications.length === 0) return;
         Alert.alert(
-            "Clear All?",
-            "Are you sure you want to delete all notifications?",
+            t.clearAllTitle,
+            t.clearAllDesc,
             [
-                { text: "Cancel", style: "cancel" },
+                { text: t.cancel, style: "cancel" },
                 {
-                    text: "Clear All",
+                    text: t.clearAll,
                     style: "destructive",
                     onPress: async () => {
                         try {
                             setNotifications([]);
                             await notificationApi.deleteAll();
+
+                            Toast.show({
+                                type: 'success',
+                                text1: t.inboxCleared,
+                            });
                         } catch (error) {
                             fetchData();
+                            Toast.show({ type: 'error', text1: t.detailError });
                         }
                     }
                 }
@@ -76,8 +91,16 @@ export default function NotificationsScreen() {
         try {
             setNotifications(prev => prev.filter(n => n._id !== id));
             await notificationApi.delete(id);
+
+            Toast.show({
+                type: 'success',
+                text1: t.notificationDeleted,
+                position: 'bottom',
+                visibilityTime: 1500
+            });
         } catch (error) {
-            console.error("Failed to delete notification");
+            fetchData();
+            Toast.show({ type: 'error', text1: t.detailError });
         }
     };
 
@@ -120,17 +143,17 @@ export default function NotificationsScreen() {
         }
     };
 
-    // 🗓️ Helper: 格式化时间 (例如 "2h ago", "Yesterday")
+    // 格式化时间 (例如 "2h ago", "Yesterday")
     const formatTime = (dateString: string) => {
         const date = new Date(dateString);
         const now = new Date();
-        const diff = (now.getTime() - date.getTime()) / 1000; // seconds
+        const diff = (now.getTime() - date.getTime()) / 1000;
 
-        if (diff < 60) return 'Just now';
-        if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-        if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-        if (diff < 172800) return 'Yesterday';
-        return date.toLocaleDateString();
+        if (diff < 60) return t.justNow;
+        if (diff < 3600) return t.minutesAgo(Math.floor(diff / 60));
+        if (diff < 86400) return t.hoursAgo(Math.floor(diff / 3600));
+        if (diff < 172800) return t.yesterday;
+        return date.toLocaleDateString(t.dateLocale);
     };
 
     if (loading) {
@@ -150,9 +173,9 @@ export default function NotificationsScreen() {
                         <Ionicons name="arrow-back" size={24} color="#1F2937" />
                     </TouchableOpacity>
                     <View>
-                        <Text className="text-2xl font-pbold text-slate-900">Inbox</Text>
+                        <Text className="text-2xl font-pbold text-slate-900">{t.inbox}</Text>
                         <Text className="text-xs text-gray-400 font-pmedium">
-                            {notifications.filter(n => !n.isRead).length} unread messages
+                            {t.unreadMessages(notifications.filter(n => !n.isRead).length)}
                         </Text>
                     </View>
                 </View>
@@ -181,8 +204,8 @@ export default function NotificationsScreen() {
                             style={{ width: 120, height: 120, marginBottom: 16 }}
                             resizeMode="contain"
                         />
-                        <Text className="text-lg font-pbold text-gray-400">All caught up!</Text>
-                        <Text className="text-sm text-gray-400">No new notifications.</Text>
+                        <Text className="text-lg font-pbold text-gray-400">{t.allCaughtUp}</Text>
+                        <Text className="text-sm text-gray-400">{t.noNewNotifications}</Text>
                     </View>
                 }
 
@@ -231,7 +254,7 @@ export default function NotificationsScreen() {
                             {/* Unread Indicator (New Badge) */}
                             {!item.isRead && (
                                 <View className="absolute -top-2 -right-1 bg-amber-500 px-2 py-0.5 rounded-full border-2 border-gray-50 shadow-sm">
-                                    <Text className="text-[8px] font-bold text-white uppercase">New</Text>
+                                    <Text className="text-[8px] font-bold text-white uppercase">{t.newBadge}</Text>
                                 </View>
                             )}
                         </View>

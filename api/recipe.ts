@@ -10,11 +10,11 @@ export interface Recipe {
 }
 
 export const recipeApi = {
-    // 🆕 增加第二个参数
-    generate: async (ingredients: string[], dietaryPreferences?: string[]) => {
+    generate: async (ingredients: string[], dietaryPreferences?: string[], language?: string) => {
         const response = await apiClient.post<{ recipes: Recipe[] }>("/recipes/generate", {
             ingredients,
-            dietaryPreferences
+            dietaryPreferences,
+            language
         });
         return response.data;
     }

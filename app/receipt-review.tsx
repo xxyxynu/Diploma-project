@@ -11,11 +11,16 @@ import {
 } from "react-native";
 import { foodApi, ScannedItem } from "../api/food";
 import { useFridgeStore } from "../store/fridgeStore";
+import { useUserStore } from "../store/userStore";
+import { translations } from "../i18n/translations";
+import Toast from "react-native-toast-message";
 
 export default function ReceiptReviewScreen() {
     const router = useRouter();
     const params = useLocalSearchParams();
     const { selectedFridge } = useFridgeStore();
+    const { language } = useUserStore();
+    const t = translations[language];
 
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -27,22 +32,29 @@ export default function ReceiptReviewScreen() {
         if (base64Img) {
             processReceipt(base64Img);
         } else {
-            Alert.alert("Error", "No image received", [{ text: "Back", onPress: () => router.back() }]);
+            Alert.alert(t.detailError || "Error", t.noImageError, [{ text: t.goBack || "Back", onPress: () => router.back() }]);
         }
     }, []);
 
     // 1. 调用后端 API 处理图片
     const processReceipt = async (base64Img: string) => {
         try {
-            const data = await foodApi.scanReceipt(base64Img);
+            const data = await foodApi.scanReceipt(base64Img, language);
             // 默认勾选所有识别出来的物品
             const itemsWithSelection = data.items.map(i => ({ ...i, selected: true }));
             setReceiptItems(itemsWithSelection);
+
+            Toast.show({
+                type: 'success',
+                text1: t.postSuccess || "Success",
+                text2: t.aiFoundItemsPrompt.slice(0, 30) + "...",
+                position: 'bottom'
+            });
         } catch (error: any) {
             Alert.alert(
-                "Scanning Failed",
-                error.response?.data?.message || "Could not read the receipt clearly.",
-                [{ text: "Go Back", onPress: () => router.back() }]
+                t.scanningFailed,
+                error.response?.data?.message || t.failedToPost,
+                [{ text: t.goBack || "Go Back", onPress: () => router.back() }]
             );
         } finally {
             setLoading(false);
@@ -63,7 +75,16 @@ export default function ReceiptReviewScreen() {
             .map(({ selected, ...rest }) => rest); // 去掉 UI 专用的 selected 字段
 
         if (selectedItems.length === 0) {
-            Alert.alert("Selection Empty", "Please select at least one item to add.");
+            Toast.show({
+                type: 'info',
+                text1: t.noItemsSelected,
+                text2: t.selectAtLeastOne
+            });
+            return;
+        }
+
+        if (!selectedFridge) {
+            Toast.show({ type: 'error', text1: t.detailError, text2: t.noFridgeSelected });
             return;
         }
 
@@ -72,13 +93,19 @@ export default function ReceiptReviewScreen() {
             // 🚀 现在只需要发送一次网络请求
             await foodApi.createMany(selectedFridge!._id, selectedItems);
 
-            Alert.alert(
-                "Success",
-                `Added ${selectedItems.length} items to your fridge!`,
-                [{ text: "Great!", onPress: () => router.push("/(tabs)/fridge") }]
-            );
+            Toast.show({
+                type: 'success',
+                text1: t.postSuccess,
+                text2: t.saveSuccessReceipt(selectedItems.length),
+            });
+
+            router.push("/(tabs)/fridge")
         } catch (error) {
-            Alert.alert("Error", "Failed to save items. Please check your connection.");
+            Toast.show({
+                type: 'error',
+                text1: t.detailError,
+                text2: t.failedToPost
+            });
         } finally {
             setSaving(false);
         }
@@ -88,8 +115,8 @@ export default function ReceiptReviewScreen() {
         return (
             <View className="flex-1 bg-white items-center justify-center p-6">
                 <ActivityIndicator size="large" color="#22C55E" />
-                <Text className="text-gray-500 mt-6 text-center font-pbold text-lg">AI is reading your receipt...</Text>
-                <Text className="text-gray-400 mt-2 text-center">Extracting items, prices, and categories</Text>
+                <Text className="text-gray-500 mt-6 text-center font-pbold text-lg">{t.aiReadingReceipt}</Text>
+                <Text className="text-gray-400 mt-2 text-center">{t.extractingDetails}</Text>
             </View>
         );
     }
@@ -101,7 +128,7 @@ export default function ReceiptReviewScreen() {
                 <TouchableOpacity onPress={() => router.back()} className="bg-white/20 p-2 rounded-full backdrop-blur-md">
                     <Ionicons name="arrow-back" size={24} color="white" />
                 </TouchableOpacity>
-                <Text className="text-white text-xl font-pbold">Review Receipt</Text>
+                <Text className="text-white text-xl font-pbold">{t.reviewReceipt}</Text>
                 <View style={{ width: 40 }} />
             </View>
 
@@ -110,7 +137,7 @@ export default function ReceiptReviewScreen() {
                 <View className="bg-green-50 p-4 rounded-xl border border-green-100 mb-6 flex-row items-start">
                     <MaterialCommunityIcons name="magic-staff" size={20} color="#16A34A" />
                     <Text className="text-green-800 font-pmedium ml-2 flex-1 text-sm leading-5">
-                        AI found these items. Uncheck what you don't want to add, or edit them later in the fridge.
+                        {t.aiFoundItemsPrompt}
                     </Text>
                 </View>
 
@@ -135,7 +162,7 @@ export default function ReceiptReviewScreen() {
                                 {item.name}
                             </Text>
                             <Text className="text-gray-500 text-xs mt-1">
-                                {item.category} • {item.quantity} {item.unit}
+                                {t.categories[item.category as keyof typeof t.categories] || item.category} • {item.quantity} {t.units ? (t.units[item.unit as keyof typeof t.units] || item.unit) : item.unit}
                             </Text>
                         </View>
                         {item.price ? (
@@ -159,7 +186,7 @@ export default function ReceiptReviewScreen() {
                         <>
                             <MaterialCommunityIcons name="fridge-outline" size={20} color="white" />
                             <Text className="text-white font-pbold text-lg ml-2">
-                                Add {receiptItems.filter(i => i.selected).length} Items
+                                {t.addItemsBtn(receiptItems.filter(i => i.selected).length)}
                             </Text>
                         </>
                     )}

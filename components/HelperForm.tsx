@@ -1,5 +1,7 @@
 import { TextInput, View, Text, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useUserStore } from "../store/userStore";
+import { translations } from "../i18n/translations";
 
 interface FormFieldProps {
     label: string;
@@ -51,6 +53,9 @@ export const DatePickerField = ({ label, date, onPress, placeholder, required }:
         });
     };
 
+    const { language } = useUserStore();
+    const t = translations[language];
+
     return (
         <View className="mb-4">
             <Text className="text-gray-700 font-pmedium mb-2">{label}</Text>
@@ -72,7 +77,7 @@ export const DatePickerField = ({ label, date, onPress, placeholder, required }:
             </TouchableOpacity>
             {!date && required && (
                 <Text className="text-orange-500 text-xs mt-1 ml-1">
-                    ⚠️ This field is required
+                    {t.required}
                 </Text>
             )}
         </View>

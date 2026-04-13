@@ -10,13 +10,17 @@ import { FoodItemCard } from "../../components/FoodItemCard";
 import { FridgeSwitcherButton } from "../../components/FridgeSwitcher";
 import { useFridgeInit } from "../../hooks/useFridgeInit";
 import { useFridgeStore } from "../../store/fridgeStore";
-import { useUserStore } from "../../store/userStore";
+import { useUserStore, Language } from "../../store/userStore";
+import { translations } from "@/i18n/translations";
+import Toast from "react-native-toast-message";
 
 export default function Home() {
   const router = useRouter();
-  const { userInfo } = useUserStore();
+  const { userInfo, language } = useUserStore();
   const { selectedFridge } = useFridgeStore(); //Get selected fridge
   const { loadFridges } = useFridgeInit(); // Initialize fridges
+
+  const t = translations[language];
 
   // State
   const [stats, setStats] = useState<ItemStats>({ total: 0, fresh: 0, expiring: 0, expired: 0 });
@@ -94,10 +98,18 @@ export default function Home() {
           onPress: async () => {
             try {
               await foodApi.delete(itemId);
-              Alert.alert("Success", "Item removed from fridge");
+              Toast.show({
+                type: 'success',
+                text1: t.deleteSuccess || "Deleted",
+                text2: itemName
+              });
               fetchData();
             } catch (error) {
-              Alert.alert("Error", "Failed to delete item");
+              Toast.show({
+                type: 'error',
+                text1: t.detailError,
+                text2: t.failedRemoveItem
+              });
             }
           }
         }
@@ -107,7 +119,11 @@ export default function Home() {
 
   const handleScanReceipt = async () => {
     if (!selectedFridge) {
-      Alert.alert("Error", "Please select a fridge first.");
+      Toast.show({
+        type: 'info',
+        text1: t.detailError,
+        text2: t.noFridgeSelected
+      });
       return;
     }
 
@@ -115,7 +131,11 @@ export default function Home() {
       // 请求权限
       const permission = await ImagePicker.requestCameraPermissionsAsync();
       if (!permission.granted) {
-        Alert.alert("Permission Denied", "Camera access is required.");
+        Toast.show({
+          type: 'error',
+          text1: t.cameraPermissionDenied,
+          text2: t.cameraPermissionMsg
+        });
         return;
       }
 
@@ -138,7 +158,11 @@ export default function Home() {
         });
       }
     } catch (error) {
-      Alert.alert("Error", "Failed to open camera");
+      Toast.show({
+        type: 'error',
+        text1: t.detailError,
+        text2: t.failedOpenCamera
+      });
     }
   };
 
@@ -147,7 +171,7 @@ export default function Home() {
     return (
       <View className="flex-1 bg-[#F8F9FA] items-center justify-center">
         <ActivityIndicator size="large" color="#22C55E" />
-        <Text className="text-gray-500 mt-4 font-pmedium">Loading your fridge...</Text>
+        <Text className="text-gray-500 mt-4 font-pmedium">{t.loadingFridge}</Text>
       </View>
     );
   }
@@ -156,15 +180,15 @@ export default function Home() {
     return (
       <View className="flex-1 bg-[#F8F9FA] items-center justify-center p-6">
         <MaterialCommunityIcons name="fridge-off-outline" size={80} color="#9CA3AF" />
-        <Text className="text-xl font-pbold text-gray-800 mt-4 mb-2">No Fridge Selected</Text>
+        <Text className="text-xl font-pbold text-gray-800 mt-4 mb-2">{t.noFridgeSelected}</Text>
         <Text className="text-gray-500 text-center mb-6">
-          Create a new fridge or join an existing one to get started
+          {t.getStartedFridge}
         </Text>
         <TouchableOpacity
           onPress={() => router.push("/fridge-management/create")}
           className="bg-primary px-6 py-3 rounded-xl"
         >
-          <Text className="text-white font-pbold">Create Fridge</Text>
+          <Text className="text-white font-pbold">{t.createFridge}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -185,7 +209,7 @@ export default function Home() {
           <View>
             <Text className="text-white text-3xl font-extrabold tracking-wide">EcoCart</Text>
             <Text className="text-green-50 text-sm font-medium mt-1">
-              Hey, {userInfo?.name?.split(' ')[0] || 'there'}! 👋
+              {t.greeting(userInfo?.name?.split(' ')[0] || 'there')}
             </Text>
           </View>
           {/* 🔔 铃铛按钮区域 */}
@@ -211,7 +235,7 @@ export default function Home() {
         <View className="flex-row space-x-4 mt-2">
           <View className="bg-white/20 flex-row items-center px-4 py-2 rounded-full flex-1 justify-center backdrop-blur-md">
             <MaterialCommunityIcons name="chart-pie" size={16} color="white" />
-            <Text className="text-white font-bold ml-2">{stats.total} Items</Text>
+            <Text className="text-white font-bold ml-2">{t.totalItemsCount(stats.total)}</Text>
           </View>
 
           <TouchableOpacity
@@ -219,7 +243,7 @@ export default function Home() {
             className="bg-white/20 flex-row items-center px-4 py-2 rounded-full flex-1 justify-center backdrop-blur-md"
           >
             <MaterialCommunityIcons name="clock-alert" size={16} color="white" />
-            <Text className="text-white font-bold ml-2">{stats.expiring} Expiring</Text>
+            <Text className="text-white font-bold ml-2">{t.expiringCount(stats.expiring)}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -237,8 +261,8 @@ export default function Home() {
         <View className="px-6 mt-8">
           <View className="flex-row justify-between items-end mb-4">
             <View>
-              <Text className="text-2xl font-pbold text-slate-800">Quick Actions</Text>
-              <Text className="text-gray-400 text-xs font-pmedium">Manage your kitchen efficiently</Text>
+              <Text className="text-2xl font-pbold text-slate-800">{t.quickActions}</Text>
+              <Text className="text-gray-400 text-xs font-pmedium">{t.manageKitchen}</Text>
             </View>
           </View>
 
@@ -253,8 +277,8 @@ export default function Home() {
                 <Ionicons name="cart" size={22} color="white" />
               </View>
               <View>
-                <Text className="text-white font-pbold text-lg">Shopping</Text>
-                <Text className="text-blue-100 text-[10px] font-pmedium">Sync with fridge</Text>
+                <Text className="text-white font-pbold text-lg">{t.shopping}</Text>
+                <Text className="text-blue-100 text-[10px] font-pmedium">{t.syncFridge}</Text>
               </View>
             </TouchableOpacity>
 
@@ -269,7 +293,7 @@ export default function Home() {
                 <View className="bg-white p-2 rounded-xl mr-3">
                   <MaterialCommunityIcons name="hand-heart" size={18} color="#A855F7" />
                 </View>
-                <Text className="text-purple-700 font-pbold text-xs">Share</Text>
+                <Text className="text-purple-700 font-pbold text-xs flex-1">{t.share}</Text>
               </TouchableOpacity>
 
               {/* 3. Scan Receipt */}
@@ -295,15 +319,15 @@ export default function Home() {
             <View className="w-32 h-32 bg-gray-100 rounded-full items-center justify-center mb-4">
               <MaterialCommunityIcons name="fridge-outline" size={64} color="#9CA3AF" />
             </View>
-            <Text className="text-xl font-pbold text-gray-800 mb-2">Your Fridge is Empty</Text>
+            <Text className="text-xl font-pbold text-gray-800 mb-2">{t.emptyFridgeTitle}</Text>
             <Text className="text-gray-500 text-center mb-6">
-              Start by scanning a barcode or adding items manually
+              {t.emptyFridgeSub}
             </Text>
             <TouchableOpacity
               onPress={() => router.push("/(tabs)/scan")}
               className="bg-primary px-6 py-3 rounded-xl"
             >
-              <Text className="text-white font-pbold">Scan Your First Item</Text>
+              <Text className="text-white font-pbold">{t.scanFirstItem}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -318,7 +342,7 @@ export default function Home() {
               <View className="flex-row justify-between items-center mb-3">
                 <View className="flex-row items-center">
                   <CategoryIcon category={category} />
-                  <Text className="text-lg font-bold text-gray-800 ml-2">{category}</Text>
+                  <Text className="text-lg font-bold text-gray-800 ml-2">{t.categories[category as keyof typeof t.categories] || category}</Text>
                   <View className="bg-gray-200 px-2 py-0.5 rounded-full ml-2">
                     <Text className="text-gray-600 text-xs font-bold">
                       {itemsByCategory[category].length}
@@ -327,7 +351,7 @@ export default function Home() {
                 </View>
                 {hasMore && (
                   <TouchableOpacity onPress={() => router.push("/(tabs)/fridge")}>
-                    <Text className="text-primary text-sm font-pbold">View All</Text>
+                    <Text className="text-primary text-sm font-pbold">{t.viewAll}</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -354,7 +378,7 @@ export default function Home() {
               className="bg-white py-4 rounded-2xl flex-row items-center justify-center"
             >
               <MaterialCommunityIcons name="fridge" size={20} color="#22C55E" />
-              <Text className="text-primary font-pbold ml-2">View Full Fridge</Text>
+              <Text className="text-primary font-pbold ml-2">{t.viewFullFridge}</Text>
             </TouchableOpacity>
           </View>
         )}

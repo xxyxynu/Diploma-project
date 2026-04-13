@@ -4,6 +4,8 @@ import * as SecureStore from "expo-secure-store";
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
+export type Language = 'EN' | 'RU' | 'KZ';
+
 export interface PointHistoryItem {
     points: number;
     reason: string;
@@ -33,6 +35,7 @@ export interface UserInfo {
 interface UserState {
     userInfo: UserInfo | null;
     isLoggedIn: boolean;
+    language: Language;
 
     // 动作 (Actions)
     login: (user: UserInfo) => void;
@@ -41,6 +44,7 @@ interface UserState {
     refreshUser: () => Promise<void>; //刷新用户信息
     updatePreferences: (prefs: string[]) => void;
     updateCity: (city: string) => void;
+    setLanguage: (lang: Language) => Promise<void>;
 }
 
 export const useUserStore = create<UserState>()(
@@ -48,6 +52,7 @@ export const useUserStore = create<UserState>()(
         (set) => ({
             userInfo: null,
             isLoggedIn: false,
+            language: 'EN' as Language,
 
             login: async (user) => {
                 await SecureStore.setItemAsync("user_token", user.token);
@@ -76,6 +81,7 @@ export const useUserStore = create<UserState>()(
                     console.error("Failed to refresh user info");
                 }
             },
+
             updatePreferences: (prefs) =>
                 set((state) => ({
                     userInfo: state.userInfo ? { ...state.userInfo, dietaryPreferences: prefs } : null
@@ -84,6 +90,16 @@ export const useUserStore = create<UserState>()(
                 set((state) => ({
                     userInfo: state.userInfo ? { ...state.userInfo, city } : null
                 })),
+
+            setLanguage: async (lang) => {
+                set({ language: lang });
+                try {
+                    await authApi.updateProfile({ language: lang }); // 🆕 同步后端
+                } catch (error) {
+                    console.error("Failed to sync language to server:", error);
+                }
+            },
+
         }),
         {
             name: 'user-storage',

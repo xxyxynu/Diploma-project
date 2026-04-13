@@ -10,32 +10,48 @@ import {
     View
 } from "react-native";
 import { fridgeApi } from "../../api/fridge";
+import { translations } from "../../i18n/translations";
 import { useFridgeStore } from "../../store/fridgeStore";
+import { useUserStore } from "../../store/userStore";
+import Toast from "react-native-toast-message";
 
 export default function JoinFridge() {
     const router = useRouter();
     const { addFridge } = useFridgeStore();
+    const { language } = useUserStore();
+    const t = translations[language];
 
     const [inviteCode, setInviteCode] = useState("");
     const [loading, setLoading] = useState(false);
 
     const handleJoin = async () => {
         if (!inviteCode.trim()) {
-            Alert.alert("Missing Code", "Please enter an invite code.");
+            Toast.show({
+                type: 'error',
+                text1: t.missingCode,
+                text2: t.enterInviteCode
+            });
             return;
         }
 
         setLoading(true);
         try {
             const result = await fridgeApi.joinFridge(inviteCode.trim().toUpperCase());
-
             addFridge(result.fridge);
 
-            Alert.alert("Success", result.message, [
-                { text: "OK", onPress: () => router.back() }
-            ]);
+            Toast.show({
+                type: 'success',
+                text1: t.joinSuccess,
+                text2: result.message || "",
+            });
+
+            router.back();
         } catch (error: any) {
-            Alert.alert("Error", error.response?.data?.message || "Failed to join fridge");
+            Toast.show({
+                type: 'error',
+                text1: t.detailError,
+                text2: error.response?.data?.message || t.failedJoinFridge
+            });
         } finally {
             setLoading(false);
         }
@@ -49,7 +65,7 @@ export default function JoinFridge() {
                     <TouchableOpacity onPress={() => router.back()}>
                         <Ionicons name="arrow-back" size={28} color="white" />
                     </TouchableOpacity>
-                    <Text className="text-white text-xl font-pbold">Join Fridge</Text>
+                    <Text className="text-white text-xl font-pbold">{t.joinFridgeTitle}</Text>
                     <View style={{ width: 28 }} />
                 </View>
             </View>
@@ -58,13 +74,13 @@ export default function JoinFridge() {
                 {/* Instructions */}
                 <View className="bg-blue-50 p-4 rounded-2xl mb-8">
                     <Text className="text-blue-900 font-pmedium">
-                        Enter the invite code shared by the fridge owner to join their fridge.
+                        {t.inviteInstruction}
                     </Text>
                 </View>
 
                 {/* Invite Code Input */}
                 <View className="mb-6">
-                    <Text className="text-gray-700 font-pmedium mb-2">Invite Code</Text>
+                    <Text className="text-gray-700 font-pmedium mb-2">{t.inviteCode}</Text>
                     <TextInput
                         className="bg-gray-100 px-4 py-4 rounded-xl text-gray-800 font-pbold text-center text-2xl tracking-widest"
                         placeholder="XXXXXXXX"
@@ -79,13 +95,13 @@ export default function JoinFridge() {
                 <TouchableOpacity
                     onPress={handleJoin}
                     disabled={loading}
-                    className={`py-4 rounded-2xl ${loading ? 'bg-gray-300' : 'bg-secondary'}`}
+                    className={`py-4 rounded-2xl ${loading ? "bg-gray-300" : "bg-secondary"}`}
                 >
                     {loading ? (
                         <ActivityIndicator color="white" />
                     ) : (
                         <Text className="text-white text-center font-pbold text-lg">
-                            Join Fridge
+                            {t.joinFridgeTitle}
                         </Text>
                     )}
                 </TouchableOpacity>

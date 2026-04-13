@@ -128,9 +128,10 @@ export const foodApi = {
         return response.data;
     },
 
-    scanReceipt: async (base64Image: string) => {
+    scanReceipt: async (base64Image: string, language: string) => {
         const response = await apiClient.post<{ items: ScannedItem[] }>("/items/scan-receipt", {
-            imageBase64: base64Image
+            imageBase64: base64Image,
+            language: language
         });
         return response.data;
     },

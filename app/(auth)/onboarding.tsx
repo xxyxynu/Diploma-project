@@ -9,6 +9,8 @@ import {
     View
 } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
+import { translations } from "@/i18n/translations";
+import { useUserStore } from "../../store/userStore";
 
 // --- 1. 定义数据结构 ---
 const SLIDES = [
@@ -19,8 +21,6 @@ const SLIDES = [
         cardColor: "bg-orange-100",
         mainIcon: "barcode-scan", // MaterialCommunityIcons
         mainIconColor: "#F97316", // orange-500
-        title: "Beep! Scanned.",
-        description: "Just scan the barcode.\nWe'll pop it into your digital fridge!",
         // 左边浮动标 (Broccoli)
         badge1: { icon: "food-apple", color: "#22c55e", bg: "bg-white", text: null },
         // 右边浮动标 (Receipt)
@@ -33,8 +33,6 @@ const SLIDES = [
         cardColor: "bg-blue-100",
         mainIcon: "piggy-bank-outline",
         mainIconColor: "#3B82F6", // blue-500
-        title: "Save that Cash!",
-        description: "Get cute reminders before food spoils.\nSave $300/year easily.",
         // 左上浮动标 (Alert)
         badge1: { icon: "bell-ring", color: "#ef4444", bg: "bg-red-100", text: "Alert!" },
         // 右下浮动标 (Money)
@@ -47,8 +45,6 @@ const SLIDES = [
         cardColor: "bg-green-100",
         mainIcon: "chef-hat",
         mainIconColor: "#22c55e", // green-500
-        title: "Yummy Magic",
-        description: "Leftovers? No problem.\nTurn them into delicious meals!",
         // 左上浮动标 (Carrot)
         badge1: { icon: "carrot", color: "#f97316", bg: "bg-white", text: null },
         // 右下浮动标 (Food)
@@ -61,6 +57,10 @@ export default function Onboarding() {
     const { width } = useWindowDimensions();
     const [currentIndex, setCurrentIndex] = useState(0);
     const flatListRef = useRef<FlatList>(null);
+
+    const { language } = useUserStore();
+
+    const t = translations[language];
 
     // 监听滚动结束，更新当前页码
     const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
@@ -85,7 +85,9 @@ export default function Onboarding() {
     };
 
     // --- 渲染每一页 (Item) ---
-    const renderItem = ({ item }: { item: typeof SLIDES[0] }) => {
+    const renderItem = ({ item, index }: { item: typeof SLIDES[0], index: number }) => {
+        const slideData = t.onboarding[index];
+
         return (
             <View style={{ width }} className={`flex-1 items-center justify-center px-6 ${item.bgColor}`}>
 
@@ -94,7 +96,7 @@ export default function Onboarding() {
                     onPress={handleSkip}
                     className="absolute top-14 right-6 bg-white px-4 py-2 rounded-full shadow-sm z-10"
                 >
-                    <Text className="text-gray-500 font-pmedium text-sm">Skip</Text>
+                    <Text className="text-gray-500 font-pmedium text-sm">{t.skip}</Text>
                 </TouchableOpacity>
 
                 {/* --- 中间大卡片区域 --- */}
@@ -134,10 +136,10 @@ export default function Onboarding() {
                 {/* --- 文字描述 --- */}
                 <View className="items-center space-y-4 px-4 h-32">
                     <Text className="text-3xl font-pbold text-slate-800 text-center">
-                        {item.title}
+                        {slideData.title}
                     </Text>
                     <Text className="text-gray-500 font-pregular text-center text-base leading-6">
-                        {item.description}
+                        {slideData.description}
                     </Text>
                 </View>
 
@@ -182,7 +184,7 @@ export default function Onboarding() {
                         }`}
                 >
                     <Text className="text-white font-psemibold text-lg mr-2">
-                        {currentIndex === 2 ? "Get Started!" : "Next Step"}
+                        {currentIndex === 2 ? t.getStarted : t.nextStep}
                     </Text>
                     {currentIndex === 2 ? (
                         <Ionicons name="sparkles" size={20} color="white" />

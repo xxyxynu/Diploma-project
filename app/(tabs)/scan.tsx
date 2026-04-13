@@ -18,15 +18,21 @@ import {
 import { foodApi, ProductInfo } from "../../api/food";
 import { DatePickerField, FormField } from "../../components/HelperForm";
 import { useFridgeStore } from "../../store/fridgeStore";
+import { translations } from "@/i18n/translations";
+import { useUserStore, Language } from "../../store/userStore";
+import Toast from "react-native-toast-message";
 
 export default function Scan() {
     const router = useRouter();
     const [permission, requestPermission] = useCameraPermissions();
     const { selectedFridge } = useFridgeStore();
+    const { language } = useUserStore();
 
     // Scanning state
     const [scanned, setScanned] = useState(false);
     const [scanning, setScanning] = useState(false);
+
+    const t = translations[language];
 
     // Form data (for the Local Modal)
     const [formData, setFormData] = useState({
@@ -48,6 +54,8 @@ export default function Scan() {
 
     const [showProductionPicker, setShowProductionPicker] = useState(false);
     const [showExpiryPicker, setShowExpiryPicker] = useState(false);
+
+    const [torchOn, setTorchOn] = useState(false);
 
     useEffect(() => {
         if (!permission?.granted) {
@@ -138,12 +146,16 @@ export default function Scan() {
     // Modal 内的保存逻辑
     const handleSave = async () => {
         if (!formData.name || !formData.expiryDate) {
-            Alert.alert("Missing Info", "Please enter product name and expiry date.");
+            Toast.show({
+                type: 'error',
+                text1: t.missingInfo,
+                text2: t.fillRequired
+            });
             return;
         }
 
         if (!selectedFridge) {
-            Alert.alert("Error", "No fridge selected.");
+            Toast.show({ type: 'error', text1: t.detailError, text2: t.noFridgeSelected });
             return;
         }
 
@@ -167,17 +179,21 @@ export default function Scan() {
                 notes: formData.notes || undefined
             });
 
-            Alert.alert("Success", "Item added to your fridge!", [
-                {
-                    text: "OK", onPress: () => {
-                        resetScanner();
-                        router.push("/(tabs)/fridge");
-                    }
-                }
-            ]);
+            Toast.show({
+                type: 'success',
+                text1: t.itemAdded,
+                text2: t.itemAddedDetail(formData.name),
+            });
+
+            resetScanner();
+            router.push("/(tabs)/fridge");
 
         } catch (error: any) {
-            Alert.alert("Error", error.response?.data?.message || "Failed to add item");
+            Toast.show({
+                type: 'error',
+                text1: t.detailError,
+                text2: error.response?.data?.message || "Failed to add item"
+            });
         } finally {
             setLoading(false);
         }
@@ -196,9 +212,9 @@ export default function Scan() {
     if (!permission?.granted) {
         return (
             <View className="flex-1 bg-gray-900 items-center justify-center p-6">
-                <Text className="text-white mb-4">Camera permission required</Text>
+                <Text className="text-white mb-4">{t.cameraPermissionRequired}</Text>
                 <TouchableOpacity onPress={requestPermission} className="bg-primary px-6 py-3 rounded-xl">
-                    <Text className="text-white font-bold">Grant Permission</Text>
+                    <Text className="text-white font-bold">{t.grantPermission}</Text>
                 </TouchableOpacity>
             </View>
         );
@@ -210,6 +226,7 @@ export default function Scan() {
                 style={{ flex: 1 }}
                 facing="back"
                 onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+                enableTorch={torchOn} //绑定手电筒状态
             />
 
             {/* Header Overlay */}
@@ -217,8 +234,10 @@ export default function Scan() {
                 <TouchableOpacity onPress={() => router.back()}>
                     <Ionicons name="close" size={30} color="white" />
                 </TouchableOpacity>
-                <Text className="text-white font-bold text-lg">Scan Barcode</Text>
-                <View style={{ width: 30 }} />
+                <Text className="text-white font-bold text-lg">{t.scanBarcode}</Text>
+                <TouchableOpacity onPress={() => setTorchOn(prev => !prev)}>
+                    <Ionicons name={torchOn ? "flashlight" : "flashlight-outline"} size={30} color="white" />
+                </TouchableOpacity>
             </View>
 
             {/* Scanner Frame */}
@@ -229,16 +248,16 @@ export default function Scan() {
                     <View className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-green-500 rounded-bl-2xl" />
                     <View className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-green-500 rounded-br-2xl" />
                 </View>
-                <Text className="text-white/80 mt-8 font-medium">Scanning...</Text>
+                <Text className="text-white/80 mt-8 font-medium">{t.scanning}</Text>
             </View>
 
             {/* 手动录入按钮直接跳转 */}
-            <View className="absolute bottom-20 w-full items-center">
+            <View className="absolute bottom-40 w-full items-center">
                 <TouchableOpacity
                     onPress={() => router.push("/add-manual")}
                     className="bg-white/20 backdrop-blur-md px-6 py-3 rounded-full"
                 >
-                    <Text className="text-white font-bold">Enter Manually</Text>
+                    <Text className="text-white font-bold">{t.enterManually}</Text>
                 </TouchableOpacity>
             </View>
 
@@ -249,7 +268,7 @@ export default function Scan() {
                         <TouchableOpacity onPress={resetScanner}>
                             <Ionicons name="arrow-back" size={24} color="white" />
                         </TouchableOpacity>
-                        <Text className="text-white font-bold text-lg">Confirm Item</Text>
+                        <Text className="text-white font-bold text-lg">{t.confirmItem}</Text>
                         <View style={{ width: 24 }} />
                     </View>
 
@@ -268,25 +287,25 @@ export default function Scan() {
                                         resizeMode="contain"
                                     />
                                     <View className="absolute bottom-2 right-2 bg-black/50 px-2 py-1 rounded-md">
-                                        <Text className="text-white text-xs font-bold">Change</Text>
+                                        <Text className="text-white text-xs font-bold">{t.change}</Text>
                                     </View>
                                 </>
                             ) : (
                                 <View className="items-center">
                                     <Ionicons name="camera-outline" size={32} color="#9CA3AF" />
-                                    <Text className="text-gray-400 font-medium mt-2">Add Photo</Text>
+                                    <Text className="text-gray-400 font-medium mt-2">{t.addPhoto}</Text>
                                 </View>
                             )}
                         </TouchableOpacity>
 
                         {/* Modal 内的表单 */}
-                        <FormField label="Name" value={formData.name} onChangeText={(t: string) => setFormData(p => ({ ...p, name: t }))} />
-                        <FormField label="Brand" value={formData.brand} onChangeText={(t: string) => setFormData(p => ({ ...p, brand: t }))} />
+                        <FormField label={t.name} value={formData.name} onChangeText={(t: string) => setFormData(p => ({ ...p, name: t }))} />
+                        <FormField label={t.brand} value={formData.brand} onChangeText={(t: string) => setFormData(p => ({ ...p, brand: t }))} />
 
                         <View className="flex-row gap-4 mb-4">
                             <View className="flex-1">
                                 <FormField
-                                    label="Quantity"
+                                    label={t.quantity}
                                     value={formData.quantity} //2. 直接绑定字符串
                                     keyboardType="numeric"
                                     onChangeText={(t: string) =>
@@ -295,11 +314,11 @@ export default function Scan() {
                                 />
                             </View>
                             <View className="flex-1">
-                                <FormField label="Unit" value={formData.unit} onChangeText={(t: string) => setFormData(p => ({ ...p, unit: t }))} />
+                                <FormField label={t.unit} value={formData.unit} onChangeText={(t: string) => setFormData(p => ({ ...p, unit: t }))} />
                             </View>
                             <View className="flex-1">
                                 <FormField
-                                    label="Price (₸)"
+                                    label={t.price}
                                     value={formData.price}
                                     keyboardType="numeric"
                                     placeholder="0"
@@ -309,7 +328,7 @@ export default function Scan() {
                         </View>
 
                         <DatePickerField
-                            label="Production Date"
+                            label={t.productionDate}
                             date={formData.productionDate}
                             onPress={() => setShowProductionPicker(true)}
                             placeholder="Optional"
@@ -319,7 +338,7 @@ export default function Scan() {
                         )}
 
                         <DatePickerField
-                            label="Expiry Date *"
+                            label={t.expirationDate}
                             date={formData.expiryDate}
                             onPress={() => setShowExpiryPicker(true)}
                             required
@@ -329,7 +348,7 @@ export default function Scan() {
                         )}
 
                         <TouchableOpacity onPress={handleSave} disabled={loading} className="bg-primary mt-6 py-4 rounded-xl items-center">
-                            {loading ? <ActivityIndicator color="white" /> : <Text className="text-white font-bold text-lg">Save</Text>}
+                            {loading ? <ActivityIndicator color="white" /> : <Text className="text-white font-bold text-lg">{t.save}</Text>}
                         </TouchableOpacity>
                     </ScrollView>
                 </View>

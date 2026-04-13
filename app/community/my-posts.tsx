@@ -13,13 +13,16 @@ import {
 } from "react-native";
 import { communityApi, CommunityPost } from "../../api/community";
 import { useUserStore } from "../../store/userStore";
+import { translations } from "@/i18n/translations";
+import Toast from "react-native-toast-message";
 
 export default function MyPosts() {
     const router = useRouter();
-    const { userInfo } = useUserStore();
+    const { userInfo, language } = useUserStore();
     const [posts, setPosts] = useState<CommunityPost[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const t = translations[language];
 
     useEffect(() => {
         fetchMyPosts();
@@ -28,38 +31,74 @@ export default function MyPosts() {
     const fetchMyPosts = async () => {
         try {
             const allPosts = await communityApi.getAll();
-            const myPosts = allPosts.filter(p => p.postedBy._id === userInfo?._id);
+
+            // 1. 确保 allPosts 是一个数组
+            if (!Array.isArray(allPosts)) {
+                setPosts([]);
+                return;
+            }
+
+            // 2. 使用可选链 ?. 访问 postedBy._id，防止 p.postedBy 为空时崩溃
+            const myPosts = allPosts.filter(p => p.postedBy?._id === userInfo?._id);
+
             setPosts(myPosts);
         } catch (error) {
-            console.error("Failed to load my posts");
+            console.error("Failed to load my posts", error);
+            Toast.show({
+                type: 'error',
+                text1: t.detailError,
+                text2: t.fetchPostsError
+            });
         } finally {
             setLoading(false);
             setRefreshing(false);
         }
     };
-
     const handleMarkTaken = async (id: string) => {
-        Alert.alert("Confirm", "Mark this item as taken?", [
-            { text: "Cancel", style: "cancel" },
+        Alert.alert("Confirm", t.markItemTaken, [
+            { text: t.cancel, style: "cancel" },
             {
-                text: "Yes", onPress: async () => {
-                    await communityApi.updateStatus(id, 'taken');
-                    fetchMyPosts();
+                text: t.yes, onPress: async () => {
+                    try {
+                        await communityApi.updateStatus(id, 'taken');
+                        Toast.show({
+                            type: 'success',
+                            text1: t.postMarkedTaken,
+                            text2: t.postMarkedTakenDetail
+                        });
+                        fetchMyPosts();
+                    } catch (e) {
+                        Toast.show({ type: 'error', text1: t.detailError });
+                    }
                 }
             }
         ]);
     };
 
     const handleDelete = async (id: string) => {
-        Alert.alert("Delete", "Are you sure?", [
-            { text: "Cancel", style: "cancel" },
+        Alert.alert("Delete", t.areYouSure, [
+            { text: t.cancel, style: "cancel" },
             {
-                text: "Delete", style: 'destructive', onPress: async () => {
-                    await communityApi.delete(id);
-                    fetchMyPosts();
+                text: t.delete, style: 'destructive', onPress: async () => {
+                    try {
+                        await communityApi.delete(id);
+                        Toast.show({
+                            type: 'success',
+                            text1: t.postDeletedSuccess
+                        });
+                        fetchMyPosts();
+                    } catch (e) {
+                        Toast.show({ type: 'error', text1: t.detailError });
+                    }
                 }
             }
         ]);
+    };
+
+    const getTranslatedStatus = (status: string) => {
+        if (status === 'taken') return t.statusTaken;
+        if (status === 'reserved') return t.statusReserved;
+        return t.statusAvailable;
     };
 
     if (loading) {
@@ -83,9 +122,9 @@ export default function MyPosts() {
                     </TouchableOpacity>
 
                     <View className="items-center">
-                        <Text className="text-white text-xl font-pbold">My Contributions</Text>
+                        <Text className="text-white text-xl font-pbold">{t.myContributions}</Text>
                         <Text className="text-purple-100 text-[10px] font-pbold uppercase tracking-widest mt-1">
-                            {posts.length} Items Shared
+                            {t.postsShared.replace("{count}", posts.length.toString())}
                         </Text>
                     </View>
                     <View style={{ width: 44 }} />
@@ -102,15 +141,15 @@ export default function MyPosts() {
                         <View className="bg-purple-50 p-8 rounded-full mb-6">
                             <MaterialCommunityIcons name="heart-plus-outline" size={80} color="#A855F7" />
                         </View>
-                        <Text className="text-slate-800 text-xl font-pbold text-center">No Shares Yet</Text>
+                        <Text className="text-slate-800 text-xl font-pbold text-center">{t.noSharesYet}</Text>
                         <Text className="text-slate-400 text-center font-pregular mt-2">
-                            Start your sustainability journey by sharing excess food with your neighbors.
+                            {t.sharePrompt}
                         </Text>
                         <TouchableOpacity
                             onPress={() => router.push("/community/create")}
                             className="mt-8 bg-purple-600 px-10 py-4 rounded-2xl shadow-lg shadow-purple-200"
                         >
-                            <Text className="text-white font-pbold text-lg text-center">Share My First Item</Text>
+                            <Text className="text-white font-pbold text-lg text-center">{t.shareMyFirstItem}</Text>
                         </TouchableOpacity>
                     </View>
                 }
@@ -141,14 +180,16 @@ export default function MyPosts() {
                                     </Text>
                                     <View className={`px-2.5 py-1 rounded-lg ${item.status === 'taken' ? 'bg-slate-100' : 'bg-green-50'}`}>
                                         <Text className={`text-[10px] font-pbold uppercase tracking-tighter ${item.status === 'taken' ? 'text-slate-400' : 'text-green-600'}`}>
-                                            {item.status}
+                                            {getTranslatedStatus(item.status)}
                                         </Text>
                                     </View>
                                 </View>
-                                <View className="flex-row items-center">
+                                <View className="flex-row items-start">
                                     <Ionicons name="calendar-outline" size={12} color="#94a3b8" />
                                     <Text className="text-xs text-slate-400 font-pmedium ml-1">
-                                        Posted on {new Date(item.createdAt).toLocaleDateString()}
+                                        {item.createdAt
+                                            ? t.postedOn(new Date(item.createdAt).toLocaleDateString(t.dateLocale))
+                                            : '---'}
                                     </Text>
                                 </View>
                             </View>
@@ -161,11 +202,11 @@ export default function MyPosts() {
                                     className="flex-[2] bg-slate-900 h-12 rounded-2xl flex-row items-center justify-center shadow-md shadow-slate-200"
                                 >
                                     <Ionicons name="checkmark-circle-outline" size={18} color="white" />
-                                    <Text className="text-white font-pbold text-sm ml-2">Mark Taken</Text>
+                                    <Text className="text-white font-pbold text-sm ml-2">{t.markAsTaken}</Text>
                                 </TouchableOpacity>
                             ) : (
                                 <View className="flex-[2] bg-slate-50 h-12 rounded-2xl items-center justify-center border border-slate-100">
-                                    <Text className="text-slate-300 font-pbold text-sm italic">Item Claimed</Text>
+                                    <Text className="text-slate-300 font-pbold text-sm italic">{t.itemClaimed}</Text>
                                 </View>
                             )}
 

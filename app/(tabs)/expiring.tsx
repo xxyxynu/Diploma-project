@@ -16,10 +16,14 @@ import { Recipe, recipeApi } from "../../api/recipe"; // 引入 Recipe API
 import { ExpiringItemCard } from "../../components/ExpiringItemCard";
 import { RecipeModal } from "../../components/RecipeModal"; // 引入 Modal
 import { useFridgeStore } from "../../store/fridgeStore";
+import { translations } from "@/i18n/translations";
+import { useNetworkStore } from "@/store/networkStore";
+import Toast from "react-native-toast-message";
 
 export default function Expiring() {
     const router = useRouter();
     const { selectedFridge } = useFridgeStore();
+    const { isConnected } = useNetworkStore();
 
     // Data State
     const [expiringItems, setExpiringItems] = useState<FridgeItem[]>([]);
@@ -34,8 +38,11 @@ export default function Expiring() {
     const [recipeModalVisible, setRecipeModalVisible] = useState(false);
     const [generatedRecipes, setGeneratedRecipes] = useState<Recipe[]>([]);
 
-    const { userInfo } = useUserStore();
+    const { userInfo, language } = useUserStore();
     const { refreshUser } = useUserStore();
+
+    const t = translations[language];
+
 
     useEffect(() => {
         if (selectedFridge) {
@@ -91,9 +98,17 @@ export default function Expiring() {
                             fetchData();
                             refreshUser();
 
-                            Alert.alert("Item Removed", "Try to consume it next time! 🌱");
+                            Toast.show({
+                                type: 'info', // 使用 info 代表非积极删除
+                                text1: t.itemRemovedWasted,
+                                text2: t.tryNotToWaste,
+                            });
                         } catch (error) {
-                            Alert.alert("Error", "Failed to delete item");
+                            Toast.show({
+                                type: 'error',
+                                text1: t.detailError,
+                                text2: t.failedRemoveItem,
+                            });
                         }
                     }
                 }
@@ -112,17 +127,23 @@ export default function Expiring() {
                     text: "Yes, Consumed",
                     onPress: async () => {
                         try {
-                            // ❌ 旧代码: await foodApi.delete(itemId);
-                            // ✅ 新代码: 调用 consume
                             const res = await foodApi.consume(itemId);
 
                             // 刷新列表 & 刷新用户积分数据
                             fetchData();
                             refreshUser();
 
-                            Alert.alert("Great Job! 🎉", `You earned +10 Eco Points! Total: ${res.ecoPoints}`);
+                            Toast.show({
+                                type: 'success',
+                                text1: t.earnedEcoPoints(10),
+                                text2: t.totalEcoPoints(res.ecoPoints),
+                            });
                         } catch (error) {
-                            Alert.alert("Error", "Failed to update item");
+                            Toast.show({
+                                type: 'error',
+                                text1: t.detailError,
+                                text2: t.failedUpdateItem || "Failed to update",
+                            });
                         }
                     }
                 }
@@ -140,8 +161,21 @@ export default function Expiring() {
 
     //Generate Recipe Logic
     const handleGenerateRecipe = async () => {
+        if (!isConnected) {
+            Toast.show({
+                type: 'error',
+                text1: t.missingInfo || "Offline",
+                text2: t.offlineError,
+            });
+            return;
+        }
+
         if (selectedItems.length === 0) {
-            Alert.alert("No Items Selected", "Please select items to generate a recipe.");
+            Toast.show({
+                type: 'info',
+                text1: t.noItemsSelected,
+                text2: t.selectItemsToGenerate,
+            });
             return;
         }
 
@@ -155,12 +189,23 @@ export default function Expiring() {
             // Call AI API
             const data = await recipeApi.generate(
                 ingredientNames,
-                userInfo?.dietaryPreferences || [] // 传给后端
+                userInfo?.dietaryPreferences || [],
+                language
             );
             setGeneratedRecipes(data.recipes);
             setRecipeModalVisible(true);
+
+            Toast.show({
+                type: 'success',
+                text1: t.chefAiTitle || "Chef AI",
+                text2: t.recipeAiPrompt,
+            });
         } catch (error) {
-            Alert.alert("Error", "Chef AI is busy right now. Please try again later.");
+            Toast.show({
+                type: 'error',
+                text1: t.detailError,
+                text2: t.chefAiBusy,
+            });
         } finally {
             setGenerating(false);
         }
@@ -187,7 +232,7 @@ export default function Expiring() {
         return (
             <View className="flex-1 bg-white items-center justify-center">
                 <ActivityIndicator size="large" color="#F97316" />
-                <Text className="text-gray-500 mt-4 font-pmedium">Checking expiring items...</Text>
+                <Text className="text-gray-500 mt-4 font-pmedium">{t.checkingExpiring}</Text>
             </View>
         );
     }
@@ -195,7 +240,7 @@ export default function Expiring() {
     if (!selectedFridge) {
         return (
             <View className="flex-1 bg-gray-50 items-center justify-center p-6">
-                <Text className="text-gray-500 text-lg">Please select a fridge first.</Text>
+                <Text className="text-gray-500 text-lg">{t.pleaseSelectFridge}</Text>
             </View>
         );
     }
@@ -206,9 +251,9 @@ export default function Expiring() {
             <View className="bg-orange-500 pt-16 pb-6 px-6 rounded-b-[30px] shadow-sm z-10">
                 <View className="flex-row items-center justify-between mb-2">
                     <View>
-                        <Text className="text-white text-2xl font-pbold">Expiring Soon</Text>
+                        <Text className="text-white text-2xl font-pbold">{t.expiringSoon}</Text>
                         <Text className="text-white/80 text-sm font-pmedium mt-1">
-                            {expiringItems.length} items need attention
+                            {t.itemsNeedAttention(expiringItems.length)}
                         </Text>
                     </View>
                     <TouchableOpacity
@@ -223,15 +268,15 @@ export default function Expiring() {
                 {expiringItems.length > 0 && (
                     <View className="flex-row gap-3 mt-4">
                         <View className="bg-red-500/30 backdrop-blur-md px-3 py-2 rounded-xl flex-1 items-center">
-                            <Text className="text-white text-xs font-pmedium">Expired</Text>
+                            <Text className="text-white text-xs font-pmedium">{t.expired}</Text>
                             <Text className="text-white text-lg font-pbold">{expiredItems.length}</Text>
                         </View>
                         <View className="bg-white/30 backdrop-blur-md px-3 py-2 rounded-xl flex-1 items-center">
-                            <Text className="text-white text-xs font-pmedium">Today</Text>
+                            <Text className="text-white text-xs font-pmedium">{t.today}</Text>
                             <Text className="text-white text-lg font-pbold">{expiringToday.length}</Text>
                         </View>
                         <View className="bg-white/30 backdrop-blur-md px-3 py-2 rounded-xl flex-1 items-center">
-                            <Text className="text-white text-xs font-pmedium">Soon</Text>
+                            <Text className="text-white text-xs font-pmedium">{t.soon}</Text>
                             <Text className="text-white text-lg font-pbold">{expiringSoon.length}</Text>
                         </View>
                     </View>
@@ -252,15 +297,15 @@ export default function Expiring() {
                         <View className="w-32 h-32 bg-green-100 rounded-full items-center justify-center mb-4">
                             <MaterialCommunityIcons name="check-circle" size={64} color="#22C55E" />
                         </View>
-                        <Text className="text-xl font-pbold text-gray-800 mb-2">All Good!</Text>
+                        <Text className="text-xl font-pbold text-gray-800 mb-2">{t.allGood}</Text>
                         <Text className="text-gray-500 text-center mb-6">
-                            No items are expiring soon. Keep up the great work! 🎉
+                            {t.noExpiringItems}
                         </Text>
                         <TouchableOpacity
                             onPress={() => router.push("/(tabs)/fridge")}
                             className="bg-primary px-6 py-3 rounded-xl"
                         >
-                            <Text className="text-white font-pbold">View All Items</Text>
+                            <Text className="text-white font-pbold">{t.viewAllItems}</Text>
                         </TouchableOpacity>
                     </View>
                 )}
@@ -268,20 +313,20 @@ export default function Expiring() {
                 {/* Action Bar (when items selected) */}
                 {selectedItems.length > 0 && (
                     <View className="mx-6 mt-4 bg-gray-800 p-4 rounded-2xl flex-row items-center justify-between shadow-lg">
-                        <Text className="text-white font-pbold">{selectedItems.length} selected</Text>
+                        <Text className="text-white font-pbold">{t.itemsSelected(selectedItems.length)}</Text>
                         <View className="flex-row gap-3">
                             <TouchableOpacity
                                 onPress={() => setSelectedItems([])}
                                 className="bg-white/20 px-4 py-2 rounded-xl"
                             >
-                                <Text className="text-white font-pbold text-sm">Clear</Text>
+                                <Text className="text-white font-pbold text-sm">{t.clear}</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 onPress={handleGenerateRecipe}
                                 className="bg-amber-500 px-4 py-2 rounded-xl flex-row items-center"
                             >
                                 <MaterialCommunityIcons name="chef-hat" size={16} color="white" />
-                                <Text className="text-white font-pbold text-sm ml-1">Recipe</Text>
+                                <Text className="text-white font-pbold text-sm ml-1">{t.recipe}</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -294,7 +339,7 @@ export default function Expiring() {
                     <View className="px-6 mt-6">
                         <View className="flex-row items-center mb-3">
                             <Ionicons name="close-circle" size={20} color="#DC2626" />
-                            <Text className="text-lg font-pbold text-gray-800 ml-2">Expired</Text>
+                            <Text className="text-lg font-pbold text-gray-800 ml-2">{t.expired}</Text>
                         </View>
                         <View className="space-y-3">
                             {expiredItems.map(item => (
@@ -316,7 +361,7 @@ export default function Expiring() {
                     <View className="px-6 mt-6">
                         <View className="flex-row items-center mb-3">
                             <Ionicons name="alert-circle" size={20} color="#F97316" />
-                            <Text className="text-lg font-pbold text-gray-800 ml-2">Expires Today</Text>
+                            <Text className="text-lg font-pbold text-gray-800 ml-2">{t.expiresToday}</Text>
                         </View>
                         <View className="space-y-3">
                             {expiringToday.map(item => (
@@ -338,7 +383,7 @@ export default function Expiring() {
                     <View className="px-6 mt-6">
                         <View className="flex-row items-center mb-3">
                             <Ionicons name="time" size={20} color="#F59E0B" />
-                            <Text className="text-lg font-pbold text-gray-800 ml-2">Within 3 Days</Text>
+                            <Text className="text-lg font-pbold text-gray-800 ml-2">{t.within3Days}</Text>
                         </View>
                         <View className="space-y-3">
                             {expiringSoon.map(item => (
@@ -360,8 +405,8 @@ export default function Expiring() {
             {expiringItems.length > 0 && selectedItems.length === 0 && (
                 <View className="absolute bottom-24 left-6 right-6 bg-white border border-gray-200 p-4 rounded-2xl flex-row items-center justify-between shadow-lg shadow-gray-200">
                     <View className="flex-1">
-                        <Text className="text-gray-800 font-pbold">What's for dinner?</Text>
-                        <Text className="text-gray-500 text-xs mt-0.5">Select items to generate recipes</Text>
+                        <Text className="text-gray-800 font-pbold">{t.whatsForDinner}</Text>
+                        <Text className="text-gray-500 text-xs mt-0.5">{t.selectItemsToGenerateRecipes}</Text>
                     </View>
                     <TouchableOpacity
                         onPress={() => {
@@ -372,7 +417,7 @@ export default function Expiring() {
                         }}
                         className="bg-orange-500 px-4 py-2 rounded-xl"
                     >
-                        <Text className="text-white font-pbold text-sm">Select Fresh</Text>
+                        <Text className="text-white font-pbold text-sm">{t.selectFresh}</Text>
                     </TouchableOpacity>
                 </View>
             )}
@@ -382,8 +427,8 @@ export default function Expiring() {
                 <View className="absolute inset-0 bg-black/40 items-center justify-center z-50">
                     <View className="bg-white p-8 rounded-3xl items-center shadow-2xl">
                         <ActivityIndicator size="large" color="#F97316" />
-                        <Text className="text-gray-800 font-bold mt-4 text-xl">Chef AI is cooking...</Text>
-                        <Text className="text-gray-500 text-sm mt-2 text-center">Creating recipes from your ingredients</Text>
+                        <Text className="text-gray-800 font-bold mt-4 text-xl">{t.chefAICooking}</Text>
+                        <Text className="text-gray-500 text-sm mt-2 text-center">{t.creatingRecipesFromIngredients}</Text>
                     </View>
                 </View>
             )}

@@ -1,6 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
 import { Modal, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { useUserStore } from "../store/userStore";
+import { translations } from "../i18n/translations";
 
 interface Props {
     visible: boolean;
@@ -17,6 +19,8 @@ const OPTIONS = [
 
 export const DietaryModal = ({ visible, onClose, initialValues, onSave }: Props) => {
     const [selected, setSelected] = useState<string[]>([]);
+    const { language } = useUserStore();
+    const t = translations[language];
 
     useEffect(() => {
         if (visible) setSelected(initialValues || []);
@@ -40,14 +44,14 @@ export const DietaryModal = ({ visible, onClose, initialValues, onSave }: Props)
             <View className="flex-1 bg-black/50 justify-end">
                 <View className="bg-white rounded-t-3xl p-6">
                     <View className="flex-row justify-between items-center mb-6">
-                        <Text className="text-xl font-pbold text-slate-800">Dietary Restrictions</Text>
+                        <Text className="text-xl font-pbold text-slate-800">{t.dietaryTitle}</Text>
                         <TouchableOpacity onPress={onClose}>
                             <Ionicons name="close" size={24} color="#64748b" />
                         </TouchableOpacity>
                     </View>
 
                     <Text className="text-gray-500 mb-4 font-pmedium">
-                        Select any restrictions. Chef AI will avoid these ingredients.
+                        {t.dietarySub}
                     </Text>
 
                     <View className="flex-row flex-wrap gap-3 mb-8">
@@ -58,12 +62,12 @@ export const DietaryModal = ({ visible, onClose, initialValues, onSave }: Props)
                                     key={opt}
                                     onPress={() => toggleOption(opt)}
                                     className={`px-4 py-3 rounded-xl border ${isActive
-                                            ? 'bg-green-500 border-green-500'
-                                            : 'bg-white border-gray-200'
+                                        ? 'bg-green-500 border-green-500'
+                                        : 'bg-white border-gray-200'
                                         }`}
                                 >
                                     <Text className={`font-pbold ${isActive ? 'text-white' : 'text-gray-600'}`}>
-                                        {opt}
+                                        {t.dietOptions[opt as keyof typeof t.dietOptions] || opt}
                                     </Text>
                                 </TouchableOpacity>
                             );
@@ -74,7 +78,7 @@ export const DietaryModal = ({ visible, onClose, initialValues, onSave }: Props)
                         onPress={handleSave}
                         className="bg-primary w-full py-4 rounded-2xl items-center"
                     >
-                        <Text className="text-white font-pbold text-lg">Save Preferences</Text>
+                        <Text className="text-white font-pbold text-lg">{t.savePrefs}</Text>
                     </TouchableOpacity>
                 </View>
             </View>

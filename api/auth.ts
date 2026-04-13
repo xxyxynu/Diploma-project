@@ -3,7 +3,7 @@ import apiClient from "./config";
 
 // 1. 定义请求参数类型
 interface LoginParams {
-    email: string;
+    username: string;
     password: string;
 }
 
@@ -19,6 +19,9 @@ interface AuthResponse {
     name: string;
     email: string;
     token: string; // 我们最需要这个
+    ecoPoints?: number;
+    dietaryPreferences?: string[];
+    city?: string;
 }
 
 export interface LeaderboardData {
@@ -61,13 +64,30 @@ export const authApi = {
         return response.data;
     },
 
-    updateProfile: async (data: { dietaryPreferences?: string[], city?: string }) => {
+    updateProfile: async (data: { dietaryPreferences?: string[], city?: string, name?: string, language?: string }) => {
         const response = await apiClient.put<UserInfo>("/auth/profile", data);
         return response.data;
     },
 
     getLeaderboard: async () => {
         const response = await apiClient.get<LeaderboardData>("/auth/leaderboard");
+        return response.data;
+    },
+
+    googleLogin: async (idToken: string) => {
+        const response = await apiClient.post<UserInfo>("/auth/google", { idToken });
+        return response.data;
+    },
+    forgotPassword: async (email: string) => {
+        const response = await apiClient.post("/auth/forgot-password", { email });
+        return response.data;
+    },
+    verifyOTP: async (email: string, otp: string) => {
+        const response = await apiClient.post("/auth/verify-otp", { email, otp });
+        return response.data;
+    },
+    resetPassword: async (email: string, newPassword: string) => {
+        const response = await apiClient.post("/auth/reset-password", { email, newPassword });
         return response.data;
     }
 };

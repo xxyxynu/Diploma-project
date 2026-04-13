@@ -6,20 +6,23 @@ import {
     Alert,
     FlatList,
     RefreshControl,
-    ScrollView,
     Text,
     TouchableOpacity,
     View
 } from "react-native";
 import { cookbookApi, SavedRecipe } from "../../api/cookbook";
+import { translations } from "../../i18n/translations";
+import { useUserStore } from "../../store/userStore";
+import Toast from "react-native-toast-message";
 
 export default function CookBook() {
     const router = useRouter();
+    const { language } = useUserStore();
+    const t = translations[language];
+
     const [recipes, setRecipes] = useState<SavedRecipe[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-
-    // 记录展开的 ID
     const [expandedId, setExpandedId] = useState<string | null>(null);
 
     useEffect(() => {
@@ -39,33 +42,40 @@ export default function CookBook() {
     };
 
     const handleDelete = (id: string) => {
-        Alert.alert("Remove Recipe", "Delete this recipe from your cookbook?", [
-            { text: "Cancel", style: "cancel" },
+        Alert.alert(t.removeRecipe, t.removeRecipeConfirm, [
+            { text: t.cancel, style: "cancel" },
             {
-                text: "Delete",
+                text: t.delete,
                 style: "destructive",
                 onPress: async () => {
-                    // 乐观更新
                     const original = [...recipes];
                     setRecipes(prev => prev.filter(r => r._id !== id));
                     try {
                         await cookbookApi.delete(id);
+                        Toast.show({
+                            type: 'success',
+                            text1: t.recipeDeleted,
+                        });
                     } catch (e) {
-                        setRecipes(original); // 失败回滚
-                        Alert.alert("Error", "Could not delete");
+                        setRecipes(original);
+                        Toast.show({
+                            type: 'error',
+                            text1: t.detailError,
+                            text2: t.couldNotDelete
+                        });
                     }
                 }
             }
         ]);
     };
 
-    // 🎨 难度颜色辅助函数
-    const getDifficultyColor = (diff: string) => {
+    const getDifficultyStyle = (diff: string) => {
+        const label = t.difficulty[diff as keyof typeof t.difficulty] ?? diff;
         switch (diff) {
-            case 'Easy': return 'bg-green-100 text-green-700';
-            case 'Medium': return 'bg-orange-100 text-orange-700';
-            case 'Hard': return 'bg-red-100 text-red-700';
-            default: return 'bg-gray-100 text-gray-600';
+            case "Easy": return { bg: "bg-green-100", text: "text-green-700", label };
+            case "Medium": return { bg: "bg-orange-100", text: "text-orange-700", label };
+            case "Hard": return { bg: "bg-red-100", text: "text-red-700", label };
+            default: return { bg: "bg-gray-100", text: "text-gray-600", label };
         }
     };
 
@@ -79,18 +89,22 @@ export default function CookBook() {
 
     return (
         <View className="flex-1 bg-gray-50">
-            {/* Header: 暖黄色系 */}
+            {/* Header */}
             <View className="bg-amber-500 pt-16 pb-6 px-6 rounded-b-[35px] shadow-sm z-10 flex-row items-center justify-between">
                 <TouchableOpacity
                     onPress={() => router.back()}
-                    className="bg-white/20 p-2 rounded-full backdrop-blur-md"
+                    className="bg-white/20 p-2 rounded-full"
                 >
                     <Ionicons name="arrow-back" size={24} color="white" />
                 </TouchableOpacity>
+
                 <View className="items-center">
-                    <Text className="text-white text-2xl font-pbold">My CookBook</Text>
-                    <Text className="text-amber-100 text-xs font-medium">{recipes.length} Saved Recipes</Text>
+                    <Text className="text-white text-2xl font-pbold">{t.myCookbook}</Text>
+                    <Text className="text-amber-100 text-xs font-medium">
+                        {t.savedCount(recipes.length)}
+                    </Text>
                 </View>
+
                 <View style={{ width: 40 }} />
             </View>
 
@@ -98,25 +112,34 @@ export default function CookBook() {
                 data={recipes}
                 keyExtractor={item => item._id}
                 contentContainerStyle={{ padding: 20, paddingBottom: 50 }}
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchRecipes(); }} tintColor="#F59E0B" />}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={() => { setRefreshing(true); fetchRecipes(); }}
+                        tintColor="#F59E0B"
+                    />
+                }
 
                 ListEmptyComponent={
                     <View className="items-center mt-20 opacity-60">
                         <MaterialCommunityIcons name="chef-hat" size={80} color="#CBD5E1" />
-                        <Text className="text-gray-400 mt-6 font-pbold text-xl">Kitchen is quiet...</Text>
-                        <Text className="text-gray-400 text-sm mt-2 text-center w-64">
-                            Go to "Expiring" items and let AI Chef generate some magic for you!
+                        <Text className="text-gray-400 mt-6 font-pbold text-xl">
+                            {t.cookbookQuiet}
+                        </Text>
+                        <Text className="text-gray-400 text-sm mt-2 text-center w-72">
+                            {t.cookbookHint}
                         </Text>
                     </View>
                 }
 
                 renderItem={({ item }) => {
                     const isExpanded = expandedId === item._id;
-                    const diffStyle = getDifficultyColor(item.difficulty);
+                    const diff = getDifficultyStyle(item.difficulty);
 
                     return (
                         <View className="bg-white rounded-[24px] mb-5 shadow-sm border border-gray-100 overflow-hidden">
-                            {/* Card Header (Clickable) */}
+
+                            {/* Card Header — tap to expand */}
                             <TouchableOpacity
                                 activeOpacity={0.8}
                                 onPress={() => setExpandedId(isExpanded ? null : item._id)}
@@ -130,29 +153,25 @@ export default function CookBook() {
 
                                         {/* Tags Row */}
                                         <View className="flex-row flex-wrap gap-2">
-                                            {/* Time */}
                                             <View className="flex-row items-center bg-gray-50 px-2 py-1 rounded-md border border-gray-100">
                                                 <Ionicons name="time-outline" size={12} color="#64748B" />
                                                 <Text className="text-xs text-slate-600 font-bold ml-1">{item.time}</Text>
                                             </View>
 
-                                            {/* Calories */}
                                             <View className="flex-row items-center bg-gray-50 px-2 py-1 rounded-md border border-gray-100">
                                                 <Ionicons name="flame-outline" size={12} color="#F97316" />
                                                 <Text className="text-xs text-slate-600 font-bold ml-1">{item.calories}</Text>
                                             </View>
 
-                                            {/* Difficulty */}
-                                            <View className={`px-2 py-1 rounded-md ${diffStyle.split(' ')[0]}`}>
-                                                <Text className={`text-xs font-bold ${diffStyle.split(' ')[1]}`}>
-                                                    {item.difficulty}
+                                            <View className={`px-2 py-1 rounded-md ${diff.bg}`}>
+                                                <Text className={`text-xs font-bold ${diff.text}`}>
+                                                    {diff.label}
                                                 </Text>
                                             </View>
                                         </View>
                                     </View>
 
-                                    {/* Expand/Collapse Icon */}
-                                    <View className={`w-8 h-8 rounded-full items-center justify-center ${isExpanded ? 'bg-amber-100' : 'bg-gray-50'}`}>
+                                    <View className={`w-8 h-8 rounded-full items-center justify-center ${isExpanded ? "bg-amber-100" : "bg-gray-50"}`}>
                                         <Ionicons
                                             name={isExpanded ? "chevron-up" : "chevron-down"}
                                             size={18}
@@ -162,15 +181,17 @@ export default function CookBook() {
                                 </View>
                             </TouchableOpacity>
 
-                            {/* Expanded Content (Details) */}
+                            {/* Expanded Content */}
                             {isExpanded && (
                                 <View className="border-t border-gray-100 bg-slate-50/50">
 
-                                    {/* Ingredients Section */}
+                                    {/* Ingredients */}
                                     <View className="p-5 pb-2">
                                         <View className="flex-row items-center mb-3">
                                             <MaterialCommunityIcons name="basket-outline" size={18} color="#D97706" />
-                                            <Text className="font-pbold text-sm text-slate-700 ml-2 uppercase tracking-wide">Ingredients</Text>
+                                            <Text className="font-pbold text-sm text-slate-700 ml-2 uppercase tracking-wide">
+                                                {t.ingredients}
+                                            </Text>
                                         </View>
                                         <View className="flex-row flex-wrap gap-2">
                                             {item.ingredients.map((ing, i) => (
@@ -181,20 +202,20 @@ export default function CookBook() {
                                         </View>
                                     </View>
 
-                                    {/* Instructions Section */}
+                                    {/* Instructions */}
                                     <View className="p-5 pt-2">
                                         <View className="flex-row items-center mb-3 mt-4">
                                             <MaterialCommunityIcons name="chef-hat" size={18} color="#D97706" />
-                                            <Text className="font-pbold text-sm text-slate-700 ml-2 uppercase tracking-wide">Instructions</Text>
+                                            <Text className="font-pbold text-sm text-slate-700 ml-2 uppercase tracking-wide">
+                                                {t.instructions}
+                                            </Text>
                                         </View>
 
                                         {item.instructions.map((step, i) => (
                                             <View key={i} className="flex-row mb-4">
-                                                {/* Step Number Bubble */}
                                                 <View className="w-6 h-6 rounded-full items-center justify-center mr-3 mt-0.5">
                                                     <Text className="text-amber-700 font-bold text-xs">{i + 1}</Text>
                                                 </View>
-                                                {/* Step Text */}
                                                 <Text className="text-slate-600 flex-1 text-sm leading-6 font-pregular">
                                                     {step}
                                                 </Text>
@@ -202,7 +223,7 @@ export default function CookBook() {
                                         ))}
                                     </View>
 
-                                    {/* Footer Actions */}
+                                    {/* Footer — Delete */}
                                     <View className="px-5 pb-5 pt-2 flex-row justify-end border-t border-gray-100 bg-white">
                                         <TouchableOpacity
                                             onPress={() => handleDelete(item._id)}

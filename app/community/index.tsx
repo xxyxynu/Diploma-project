@@ -15,13 +15,16 @@ import {
 } from "react-native";
 import { communityApi, CommunityPost } from "../../api/community";
 import { useUserStore } from "../../store/userStore";
+import { translations } from "../../i18n/translations";
+import Toast from "react-native-toast-message";
 
 const CITIES = ['All', 'Almaty', 'Astana', 'Shymkent', 'Karaganda', 'Aktau', 'Atyrau', 'Other'];
 const CATEGORIES = ['All', 'Fruit', 'Vegetables', 'Bakery', 'Canned', 'Cooked', 'Other'];
 
 export default function CommunityFeed() {
     const router = useRouter();
-    const { userInfo } = useUserStore();
+    const { userInfo, language } = useUserStore();
+    const t = translations[language];
 
     const [posts, setPosts] = useState<CommunityPost[]>([]);
     const [loading, setLoading] = useState(true);
@@ -54,7 +57,11 @@ export default function CommunityFeed() {
             const data = await communityApi.getAll(params);
             setPosts(data);
         } catch (error) {
-            console.error("Failed to load community posts");
+            Toast.show({
+                type: 'error',
+                text1: t.detailError,
+                text2: t.loadPostsError
+            });
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -81,11 +88,15 @@ export default function CommunityFeed() {
         try {
             const { status } = await Location.requestForegroundPermissionsAsync();
             if (status !== 'granted') {
-                Alert.alert("Permission Denied", "Allow location access to find items near you.");
-                setLoading(false);
+                Toast.show({
+                    type: 'error',
+                    text1: t.locationError,
+                    text2: t.locationPermissionMsg
+                });
                 return;
             }
 
+            setLoading(true);
             const location = await Location.getCurrentPositionAsync({});
             setUserCoords({
                 lat: location.coords.latitude,
@@ -94,9 +105,16 @@ export default function CommunityFeed() {
 
             setIsNearby(true);
             setCityFilter("All");
+
+            Toast.show({
+                type: 'success',
+                text1: t.proximityActive,
+                position: 'bottom'
+            });
         } catch (error) {
             setIsNearby(false);
             setLoading(false);
+            Toast.show({ type: 'error', text1: t.locationError });
         }
     };
 
@@ -128,9 +146,9 @@ export default function CommunityFeed() {
 
     // Status Badge
     const StatusBadge = ({ status }: { status: string }) => {
-        if (status === 'reserved') return <View className="bg-blue-100 px-2 py-1 rounded-md"><Text className="text-blue-700 text-[10px] font-bold">RESERVED</Text></View>;
-        if (status === 'taken') return <View className="bg-gray-100 px-2 py-1 rounded-md"><Text className="text-gray-500 text-[10px] font-bold">TAKEN</Text></View>;
-        return <View className="bg-green-50 px-2 py-1 rounded-md border border-green-100"><Text className="text-green-700 text-[10px] font-bold">FREE</Text></View>;
+        if (status === 'reserved') return <View className="bg-blue-100 px-2 py-1 rounded-md"><Text className="text-blue-700 text-[10px] font-bold">{t.statusReserved}</Text></View>;
+        if (status === 'taken') return <View className="bg-gray-100 px-2 py-1 rounded-md"><Text className="text-gray-500 text-[10px] font-bold">{t.statusTaken}</Text></View>;
+        return <View className="bg-green-50 px-2 py-1 rounded-md border border-green-100"><Text className="text-green-700 text-[10px] font-bold">{t.free}</Text></View>;
     };
 
     if (loading) {
@@ -143,30 +161,35 @@ export default function CommunityFeed() {
 
     return (
         <View className="flex-1 bg-gray-50">
-            {/* Header: 渐变色背景 + 磨砂质感按钮 */}
+            {/* Header*/}
             <View className="bg-purple-600 pt-16 pb-12 px-6 rounded-b-[40px] shadow-xl shadow-purple-200 relative overflow-hidden">
-                {/* 装饰性背景圆圈 */}
                 <View className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full" />
 
                 <View className="flex-row justify-between items-center mb-6">
                     <View>
-                        <Text className="text-white text-3xl font-pbold tracking-tight">Discover</Text>
+                        <Text className="text-white text-3xl font-pbold tracking-tight">{t.discover}</Text>
                         <View className="flex-row items-center mt-1">
                             <View className="w-2 h-2 bg-green-400 rounded-full mr-2" />
-                            <Text className="text-purple-100 text-xs font-pmedium">Sharing in Kazakhstan</Text>
+                            <Text className="text-purple-100 text-xs font-pmedium">{t.sharingInKazakhstan}</Text>
                         </View>
                     </View>
 
                     <View className="flex-row gap-3">
                         <TouchableOpacity
-                            onPress={() => router.push("/community/my-posts")}
-                            className="bg-white/20 p-3 rounded-2xl backdrop-blur-md border border-white/30"
+                            onPress={() => router.push("/community/charities")}
+                            className="bg-white/20 p-2 rounded-2xl backdrop-blur-md border border-white/30"
                         >
                             <Ionicons name="heart" size={22} color="white" />
                         </TouchableOpacity>
                         <TouchableOpacity
+                            onPress={() => router.push("/community/my-posts")}
+                            className="bg-white/20 p-2 rounded-2xl backdrop-blur-md border border-white/30"
+                        >
+                            <Ionicons name="person" size={22} color="white" />
+                        </TouchableOpacity>
+                        <TouchableOpacity
                             onPress={() => router.push("/community/create")}
-                            className="bg-white p-3 rounded-2xl shadow-lg"
+                            className="bg-white p-2 rounded-2xl shadow-lg"
                         >
                             <Ionicons name="add" size={22} color="#9333ea" />
                         </TouchableOpacity>
@@ -175,18 +198,25 @@ export default function CommunityFeed() {
 
                 {/* 排序与快速提示 */}
                 <View className="flex-row justify-between items-center bg-black/10 p-2 rounded-2xl border border-white/10">
-                    <View className="flex-row items-center ml-2">
+                    <View className="flex-row items-center ml-2 flex-1 mr-2">
                         <Ionicons name="funnel-outline" size={14} color="#ddd6fe" />
-                        <Text className="text-purple-100 text-[10px] font-pbold uppercase ml-2 tracking-widest">
-                            {isNearby ? "Proximity Active" : "Sorted by Date"}
+                        <Text
+                            numberOfLines={1}
+                            className="text-purple-100 text-[10px] font-pbold uppercase ml-2 tracking-widest shrink"
+                        >
+                            {isNearby ? t.proximityActive : t.sortedByDate}
                         </Text>
                     </View>
+
                     <TouchableOpacity
                         onPress={() => setSortOrder(prev => prev === 'newest' ? 'oldest' : 'newest')}
-                        className="bg-white/20 px-4 py-1.5 rounded-xl border border-white/20"
+                        className="bg-white/20 px-3 py-1.5 rounded-xl border border-white/20 flex-none"
                     >
-                        <Text className="text-white text-[10px] font-pbold uppercase">
-                            {sortOrder === 'newest' ? 'Newest' : 'Oldest'}
+                        <Text
+                            numberOfLines={1}
+                            className="text-white text-[10px] font-pbold uppercase"
+                        >
+                            {sortOrder === 'newest' ? t.newest : t.oldest}
                         </Text>
                     </TouchableOpacity>
                 </View>
@@ -203,7 +233,7 @@ export default function CommunityFeed() {
                         className={`px-3 py-1.5 rounded-full border flex-row items-center ${isNearby ? 'bg-purple-600 border-purple-600' : 'bg-white border-gray-100'}`}
                     >
                         <Ionicons name="navigate" size={12} color={isNearby ? "white" : "#4B5563"} style={{ marginRight: 4 }} />
-                        <Text className={`text-xs font-bold ${isNearby ? 'text-white' : 'text-gray-600'}`}>Nearby</Text>
+                        <Text className={`text-xs font-bold ${isNearby ? 'text-white' : 'text-gray-600'}`}>{t.nearby}</Text>
                     </TouchableOpacity>
 
                     {/* Cities */}
@@ -216,7 +246,9 @@ export default function CommunityFeed() {
                             }}
                             className={`px-3 py-1.5 rounded-full border ${!isNearby && cityFilter === city ? 'bg-purple-50 border-purple-500' : 'bg-white border-gray-100'}`}
                         >
-                            <Text className={`text-xs font-bold ${!isNearby && cityFilter === city ? 'text-purple-700' : 'text-gray-500'}`}>{city}</Text>
+                            <Text className={`text-xs font-bold ${!isNearby && cityFilter === city ? 'text-purple-700' : 'text-gray-500'}`}>
+                                {t.cities ? (t.cities[city as keyof typeof t.cities] || city) : city}
+                            </Text>
                         </TouchableOpacity>
                     ))}
                 </ScrollView>
@@ -230,7 +262,9 @@ export default function CommunityFeed() {
                             onPress={() => setCategoryFilter(cat)}
                             className={`px-3 py-1.5 rounded-full border ${categoryFilter === cat ? 'bg-gray-800 border-gray-800' : 'bg-white border-gray-100'}`}
                         >
-                            <Text className={`text-xs font-bold ${categoryFilter === cat ? 'text-white' : 'text-gray-500'}`}>{cat}</Text>
+                            <Text className={`text-xs font-bold ${categoryFilter === cat ? 'text-white' : 'text-gray-500'}`}>
+                                {t.categories ? (t.categories[cat as keyof typeof t.categories] || cat) : cat}
+                            </Text>
                         </TouchableOpacity>
                     ))}
                 </ScrollView>
@@ -243,10 +277,10 @@ export default function CommunityFeed() {
                     refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#9333ea" />}
                 >
                     <MaterialCommunityIcons name="map-search-outline" size={80} color="#e5e7eb" />
-                    <Text className="text-gray-400 mt-4 font-pmedium text-lg">No items match your filters.</Text>
+                    <Text className="text-gray-400 mt-4 font-pmedium text-lg">{t.noItemsMatchFilters}</Text>
                     {(cityFilter !== 'All' || categoryFilter !== 'All' || isNearby) && (
                         <TouchableOpacity onPress={() => { setCityFilter('All'); setCategoryFilter('All'); setIsNearby(false); }} className="mt-6 bg-white border border-gray-100 px-6 py-3 rounded-full">
-                            <Text className="text-purple-600 font-bold">Clear Filters</Text>
+                            <Text className="text-purple-600 font-bold">{t.clearFilters}</Text>
                         </TouchableOpacity>
                     )}
                 </ScrollView>
@@ -275,7 +309,9 @@ export default function CommunityFeed() {
                                 </View>
                                 {/* Category Tag on Image */}
                                 <View className="absolute top-2 left-2 bg-black/40 backdrop-blur-md px-2 py-1 rounded-lg">
-                                    <Text className="text-white text-[8px] font-pbold uppercase">{item.tags[0] || 'Other'}</Text>
+                                    <Text className="text-white text-[8px] font-pbold uppercase">
+                                        {t.categories ? (t.categories[item.tags[0] as keyof typeof t.categories] || item.tags[0] || 'Other') : (item.tags[0] || 'Other')}
+                                    </Text>
                                 </View>
                             </View>
 
@@ -293,22 +329,28 @@ export default function CommunityFeed() {
                                             <Ionicons name="location" size={10} color="#f59e0b" />
                                         </View>
                                         <Text className="text-[11px] ml-1.5 text-slate-400 font-pmedium">
-                                            {item.distance ? `${item.distance} km away` : item.location.city}
+                                            {item.distance
+                                                ? t.kmAway ? t.kmAway(item.distance) : `${item.distance} km away`
+                                                : `${t.cities ? (t.cities[item.location?.city as keyof typeof t.cities] || item.location?.city) : item.location?.city} • ${item.location?.district || ''}`
+                                            }
                                         </Text>
                                     </View>
                                 </View>
 
-                                <View className="flex-row items-center justify-between border-t border-slate-50 pt-2">
+                                <View className="flex-row items-center justify-between border-t border-slate-50 pt-1">
                                     <View className="flex-row items-center">
                                         <Image
                                             source={{ uri: `https://api.dicebear.com/9.x/avataaars/png?seed=${item.postedBy.name}` }}
                                             className="w-5 h-5 rounded-full bg-slate-100"
                                         />
                                         <Text className="text-[10px] text-slate-400 ml-1.5 font-pmedium">
-                                            {item.postedBy._id === userInfo?._id ? "You" : item.postedBy.name}
+                                            {item.postedBy._id === userInfo?._id ? t.you : `${t.by ? t.by + ' ' : ''}${item.postedBy.name}`}
                                         </Text>
                                     </View>
-                                    <Text className="text-[9px] text-slate-300 font-pbold uppercase">{new Date(item.createdAt).toLocaleDateString()}</Text>
+                                    <Text className="text-[9px] text-slate-300 font-pbold uppercase">
+                                        {/* @ts-ignore */}
+                                        {new Date(item.createdAt).toLocaleDateString(t.dateLocale || 'en-US')}
+                                    </Text>
                                 </View>
                             </View>
                         </TouchableOpacity>

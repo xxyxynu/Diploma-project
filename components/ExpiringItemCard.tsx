@@ -1,6 +1,8 @@
 import { FridgeItem } from "@/api/food";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { TouchableOpacity, View, Image, Text } from "react-native";
+import { useUserStore } from "../store/userStore";
+import { translations } from "../i18n/translations";
 
 interface ExpiringItemCardProps {
     item: FridgeItem;
@@ -15,6 +17,9 @@ export const ExpiringItemCard = ({ item, selected, onSelect, onConsume, onDelete
     const expiry = new Date(item.expiryDate);
     const daysLeft = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
+    const { language } = useUserStore();
+    const t = translations[language];
+
     // Style config
     const getUrgencyConfig = () => {
         if (item.status === 'expired') {
@@ -23,7 +28,7 @@ export const ExpiringItemCard = ({ item, selected, onSelect, onConsume, onDelete
                 bgColor: 'bg-red-50',
                 badgeBg: 'bg-red-100',
                 badgeText: 'text-red-600',
-                label: daysLeft < -1 ? `Expired ${Math.abs(daysLeft)} days ago` : 'Expired',
+                label: daysLeft < -1 ? t.expiredDaysAgo(Math.abs(daysLeft)) : t.statusExpired,
                 icon: 'close-circle' as const,
                 iconColor: '#DC2626'
             };
@@ -33,7 +38,7 @@ export const ExpiringItemCard = ({ item, selected, onSelect, onConsume, onDelete
                 bgColor: 'bg-orange-50',
                 badgeBg: 'bg-orange-100',
                 badgeText: 'text-orange-600',
-                label: 'Expires today!',
+                label: t.expiresToday,
                 icon: 'alert-circle' as const,
                 iconColor: '#F97316'
             };
@@ -43,7 +48,7 @@ export const ExpiringItemCard = ({ item, selected, onSelect, onConsume, onDelete
                 bgColor: 'bg-amber-50',
                 badgeBg: 'bg-amber-100',
                 badgeText: 'text-amber-600',
-                label: daysLeft === 1 ? 'Tomorrow' : `${daysLeft} days left`,
+                label: daysLeft === 1 ? t.tomorrow : t.daysLeft(daysLeft),
                 icon: 'time' as const,
                 iconColor: '#F59E0B'
             };
@@ -76,7 +81,8 @@ export const ExpiringItemCard = ({ item, selected, onSelect, onConsume, onDelete
                 {/* Info */}
                 <View className="flex-1">
                     <Text className="text-gray-900 font-pbold text-base" numberOfLines={1}>{item.name}</Text>
-                    <Text className="text-gray-400 text-xs mt-1">{item.quantity} {item.unit} • {item.category}</Text>
+                    <Text className="text-gray-400 text-xs mt-1">{item.quantity} {t.units ? (t.units[item.unit as keyof typeof t.units] || item.unit) : item.unit} • {t.categories[item.category as keyof typeof t.categories] || item.category}
+                    </Text>
 
                     <View className={`self-start flex-row items-center px-2 py-1 rounded-lg ${config.badgeBg} mt-2`}>
                         <Ionicons name={config.icon} size={12} color={config.iconColor} />
@@ -93,7 +99,7 @@ export const ExpiringItemCard = ({ item, selected, onSelect, onConsume, onDelete
                         className="flex-1 bg-green-50 border border-green-200 py-2.5 rounded-xl flex-row items-center justify-center"
                     >
                         <Ionicons name="checkmark-circle" size={16} color="#22C55E" />
-                        <Text className="text-green-600 font-pbold text-sm ml-1">Consumed</Text>
+                        <Text className="text-green-600 font-pbold text-sm ml-1">{t.consumed}</Text>
                     </TouchableOpacity>
                 )}
                 <TouchableOpacity
@@ -101,7 +107,7 @@ export const ExpiringItemCard = ({ item, selected, onSelect, onConsume, onDelete
                     className="flex-1 bg-gray-50 border border-gray-200 py-2.5 rounded-xl flex-row items-center justify-center"
                 >
                     <Ionicons name="trash-outline" size={16} color="#6B7280" />
-                    <Text className="text-gray-600 font-pbold text-sm ml-1">Remove</Text>
+                    <Text className="text-gray-600 font-pbold text-sm ml-1">{t.remove}</Text>
                 </TouchableOpacity>
             </View>
         </TouchableOpacity>

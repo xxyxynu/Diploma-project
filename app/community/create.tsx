@@ -17,12 +17,19 @@ import { communityApi } from "../../api/community";
 import { foodApi, FridgeItem } from "../../api/food";
 import { LocationPicker } from "../../components/LocationPicker";
 import { useFridgeStore } from "../../store/fridgeStore";
+import { translations } from "@/i18n/translations";
+import { useUserStore } from "@/store/userStore";
+import { useNetworkStore } from "@/store/networkStore";
+import Toast from "react-native-toast-message";
 
 const TAGS = ['Fruit', 'Vegetables', 'Bakery', 'Canned', 'Cooked', 'Other'];
 
 export default function CreateShare() {
     const router = useRouter();
     const { selectedFridge } = useFridgeStore();
+    const { language } = useUserStore();
+    const t = translations[language];
+    const { isConnected } = useNetworkStore();
 
     const [loading, setLoading] = useState(false);
     const [fridgeItems, setFridgeItems] = useState<FridgeItem[]>([]);
@@ -95,23 +102,41 @@ export default function CreateShare() {
 
         const selected = fridgeItems.filter(i => newIds.includes(i._id));
         const titleNames = selected.map(i => i.name).join(", ");
-        setName(selected.length > 1 ? `Bundle: ${titleNames}`.slice(0, 50) : titleNames);
+        setName(selected.length > 1 ? `${t.bundleTitle} ${titleNames}`.slice(0, 50) : titleNames);
 
         const detailDesc = selected.map(i =>
-            `- ${i.name} (${i.quantity} ${i.unit}), Exp: ${new Date(i.expiryDate).toLocaleDateString()}`
+            `- ${i.name} (${i.quantity} ${i.unit}), ${t.expires} ${new Date(i.expiryDate).toLocaleDateString()}` // 🌍 翻译 Exp:
         ).join("\n");
-        setDesc(`Sharing these items:\n${detailDesc}\n\nPlease come pick them up!`);
+
+        setDesc(`${t.sharingTheseItems}\n${detailDesc}\n\n${t.pickUpDetailsBelow}`);
     };
 
     const handlePost = async () => {
+        if (!isConnected) {
+            Toast.show({
+                type: 'error',
+                text1: t.missingInfo || "Offline",
+                text2: "Please check your internet connection."
+            });
+            return;
+        }
+
         if (!name || !desc || contact.length < 18) {
-            Alert.alert("Missing Info", "Please fill all required fields");
+            Toast.show({
+                type: 'error',
+                text1: t.missingInfo,
+                text2: t.fillRequiredFields
+            });
             return;
         }
 
         // Validate location
         if (!locationData) {
-            Alert.alert("Missing Location", "Please select a pickup location");
+            Toast.show({
+                type: 'info',
+                text1: t.missingLocation,
+                text2: t.selectPickupLocation
+            });
             return;
         }
 
@@ -131,11 +156,17 @@ export default function CreateShare() {
                 longitude: locationData.longitude
             });
 
+            Toast.show({
+                type: 'success',
+                text1: t.postSuccess,
+                text2: name
+            });
+
             if (selectedIds.length > 0) {
-                Alert.alert("Success!", "Item shared! Remove from fridge?", [
-                    { text: "No", onPress: () => router.back() },
+                Alert.alert(t.postSuccess, t.itemSharedPrompt, [
+                    { text: t.keepInFridge, onPress: () => router.back() },
                     {
-                        text: "Remove", style: 'destructive', onPress: async () => {
+                        text: t.removeFromFridge, style: 'destructive', onPress: async () => {
                             await Promise.all(selectedIds.map(id => foodApi.delete(id)));
                             router.back();
                         }
@@ -145,7 +176,11 @@ export default function CreateShare() {
                 router.back();
             }
         } catch (error: any) {
-            Alert.alert("Error", "Failed to post");
+            Toast.show({
+                type: 'error',
+                text1: t.detailError,
+                text2: t.failedToPost
+            });
         } finally {
             setLoading(false);
         }
@@ -165,14 +200,14 @@ export default function CreateShare() {
                         <Ionicons name="chevron-back" size={24} color="white" />
                     </TouchableOpacity>
 
-                    <Text className="text-white text-xl font-pbold">Share Food</Text>
+                    <Text className="text-white text-xl font-pbold">{t.shareFood}</Text>
                     <View style={{ width: 28 }} />
                 </View>
             </View>
 
             <ScrollView className="flex-1 px-6 pt-6" contentContainerStyle={{ paddingBottom: 50 }}>
                 {/* Fridge Selection */}
-                <Text className="text-gray-700 font-pbold mb-3">Select from Fridge</Text>
+                <Text className="text-gray-700 font-pbold mb-3">{t.selectFromFridge}</Text>
                 <FlatList
                     horizontal data={fridgeItems} keyExtractor={i => i._id} showsHorizontalScrollIndicator={false}
                     renderItem={({ item }) => (
@@ -203,17 +238,17 @@ export default function CreateShare() {
                     ) : (
                         <View className="items-center">
                             <Ionicons name="camera" size={32} color="#9CA3AF" />
-                            <Text className="text-gray-400 mt-2">Add Cover Photo</Text>
+                            <Text className="text-gray-400 mt-2">{t.addCoverPhoto}</Text>
                         </View>
                     )}
                 </TouchableOpacity>
 
                 {/* Fields */}
-                <Input label="Title" value={name} onChangeText={setName} />
-                <Input label="Description" value={desc} onChangeText={setDesc} multiline />
+                <Input label={t.titleLabel} value={name} onChangeText={setName} />
+                <Input label={t.descriptionLabel} value={desc} onChangeText={setDesc} multiline />
 
                 {/* Location Picker Button */}
-                <Text className="text-gray-700 font-pmedium mb-2">Pickup Location *</Text>
+                <Text className="text-gray-700 font-pmedium mb-2">{t.locationLabel}</Text>
                 <TouchableOpacity
                     onPress={() => setShowLocationPicker(true)}
                     className={`flex-row items-center justify-between p-4 rounded-xl border-2 mb-4 ${locationData
@@ -232,7 +267,7 @@ export default function CreateShare() {
                                 </Text>
                             </>
                         ) : (
-                            <Text className="text-gray-400">Tap to select location on map</Text>
+                            <Text className="text-gray-400">{t.tapToSelectLocation}</Text>
                         )}
                     </View>
                     <Ionicons
@@ -243,7 +278,7 @@ export default function CreateShare() {
                 </TouchableOpacity>
 
                 <Input
-                    label="WhatsApp / Phone"
+                    label={t.phoneLabel}
                     value={contact}
                     onChangeText={handlePhoneChange}
                     placeholder="+7 (XXX) XXX-XX-XX"
@@ -251,7 +286,7 @@ export default function CreateShare() {
                 />
 
                 {/* Category Tags */}
-                <Text className="text-gray-700 font-pmedium mb-2">Category</Text>
+                <Text className="text-gray-700 font-pmedium mb-2">{t.categoryLabel}</Text>
                 <View className="flex-row flex-wrap gap-2 mb-4">
                     {TAGS.map(tag => (
                         <TouchableOpacity
@@ -263,7 +298,7 @@ export default function CreateShare() {
                                 }`}
                         >
                             <Text className={selectedTag === tag ? 'text-white font-bold text-xs' : 'text-gray-500 text-xs'}>
-                                {tag}
+                                {t.categories ? (t.categories[tag as keyof typeof t.categories] || tag) : tag}
                             </Text>
                         </TouchableOpacity>
                     ))}
@@ -277,7 +312,7 @@ export default function CreateShare() {
                     {loading ? (
                         <ActivityIndicator color="white" />
                     ) : (
-                        <Text className="text-white font-pbold text-lg">Post</Text>
+                        <Text className="text-white font-pbold text-lg">{t.postBtn}</Text>
                     )}
                 </TouchableOpacity>
             </ScrollView>

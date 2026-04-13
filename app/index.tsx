@@ -52,7 +52,7 @@ export default function SplashScreen() {
                     EcoCart
                 </Text>
                 <Text className="text-white text-lg font-pmedium mt-2 opacity-90">
-                    Your Food Buddy 🌱
+                    Your Food Buddy
                 </Text>
             </Animated.View>
 

@@ -1,7 +1,7 @@
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import * as SecureStore from "expo-secure-store";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
@@ -24,15 +24,19 @@ import { StatItem } from "../../components/StatItem";
 import { useFridgeInit } from "../../hooks/useFridgeInit";
 import { usePushNotifications } from "../../hooks/usePushNotifications";
 import { useFridgeStore } from "../../store/fridgeStore";
-import { useUserStore } from "../../store/userStore";
+import { useUserStore, Language } from "../../store/userStore";
+import { translations } from "@/i18n/translations";
+import Toast from "react-native-toast-message";
 
 const CITIES = ['Almaty', 'Astana', 'Shymkent', 'Karaganda', 'Aktau', 'Atyrau', 'Other'];
 
 export default function Profile() {
     const router = useRouter();
-    const { userInfo, logout, refreshUser, updatePreferences, updateCity, updateName } = useUserStore();
+    const { userInfo, logout, refreshUser, updatePreferences, updateCity, updateName, language, setLanguage } = useUserStore();
     const { selectedFridge, clearFridges } = useFridgeStore();
     const { loadFridges } = useFridgeInit();
+
+    const t = translations[language];
 
     const { registerForPushNotificationsAsync } = usePushNotifications();
 
@@ -45,25 +49,42 @@ export default function Profile() {
     const [showDietaryModal, setShowDietaryModal] = useState(false);
     const [showCityModal, setShowCityModal] = useState(false);
     const [showEditProfileModal, setShowEditProfileModal] = useState(false); // 编辑资料的 Modal 状态
+    const [showLanguageModal, setShowLanguageModal] = useState(false);
 
     const [editName, setEditName] = useState("");
     const [isSaving, setIsSaving] = useState(false);
 
-    useEffect(() => {
-        if (selectedFridge) {
-            initData();
+    const fetchData = useCallback(async () => {
+        if (!selectedFridge) {
+            setLoading(false);
+            return;
+        }
+
+        try {
+            const [statsData, leaderboardData] = await Promise.all([
+                foodApi.getStats(selectedFridge._id),
+                authApi.getLeaderboard()
+            ]);
+
+            setStats(statsData);
+            setLeaderboard(leaderboardData);
+        } catch (error) {
+            console.error("Failed to load data", error);
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
         }
     }, [selectedFridge]);
 
-    const initData = async () => {
-        await Promise.all([
-            fetchStats(),
-            fetchLeaderboard(), // 并行拉取排行榜
-            checkNotificationStatus(),
-            refreshUser()
-        ]);
-        setLoading(false);
-    };
+    // const initData = async () => {
+    //     await Promise.all([
+    //         fetchStats(),
+    //         fetchLeaderboard(), // 并行拉取排行榜
+    //         checkNotificationStatus(),
+    //         refreshUser()
+    //     ]);
+    //     setLoading(false);
+    // };
 
     const fetchStats = async () => {
         if (!selectedFridge) return;
@@ -85,15 +106,36 @@ export default function Profile() {
         }
     };
 
-    const checkNotificationStatus = async () => {
+    const checkNotificationStatus = useCallback(async () => {
         try {
             const userData = await authApi.getMe();
             // @ts-ignore
             setNotificationsEnabled(!!userData.pushToken);
         } catch (error) {
-            console.error("Failed to check settings");
+            console.error("Failed to check settings", error);
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        if (!selectedFridge) return;
+
+        let active = true;
+
+        const run = async () => {
+            await Promise.all([
+                fetchData(),
+                checkNotificationStatus()
+            ]);
+
+            if (!active) return;
+        };
+
+        run();
+
+        return () => {
+            active = false;
+        };
+    }, [selectedFridge]);
 
     const toggleNotifications = async (value: boolean) => {
         setNotificationsEnabled(value);
@@ -102,17 +144,29 @@ export default function Profile() {
                 const token = await registerForPushNotificationsAsync();
                 if (token) {
                     await authApi.updatePushToken(token);
-                    Alert.alert("Notifications On", "You will now receive alerts for expiring items.");
+                    Toast.show({
+                        type: 'success',
+                        text1: t.notifOn,
+                        text2: t.notifOnMsg,
+                    });
                 } else {
                     setNotificationsEnabled(false);
-                    Alert.alert("Permission Denied", "Please enable notifications in settings.");
+                    Toast.show({
+                        type: 'error',
+                        text1: t.detailError,
+                        text2: t.cameraPermissionMsg, // 或类似的权限提示
+                    });
                 }
             } else {
                 await authApi.updatePushToken(null);
+                Toast.show({
+                    type: 'info',
+                    text1: t.notifOff,
+                });
             }
         } catch (error) {
             setNotificationsEnabled(!value);
-            Alert.alert("Error", "Failed to update settings");
+            Toast.show({ type: 'error', text1: t.detailError });
         }
     };
 
@@ -120,8 +174,12 @@ export default function Profile() {
         try {
             await authApi.updateProfile({ dietaryPreferences: newPrefs });
             updatePreferences(newPrefs);
+            Toast.show({
+                type: 'success',
+                text1: t.prefsUpdated,
+            });
         } catch (error) {
-            Alert.alert("Error", "Failed to update preferences");
+            Toast.show({ type: 'error', text1: t.detailError });
         }
     };
 
@@ -135,22 +193,38 @@ export default function Profile() {
 
             // 切换城市后刷新排行榜
             fetchLeaderboard();
+            Toast.show({
+                type: 'success',
+                text1: t.cityUpdated,
+                text2: t.cities[newCity as keyof typeof t.cities] || newCity,
+            });
         } catch (error) {
-            Alert.alert("Error", "Failed to update city");
+            Toast.show({ type: 'error', text1: t.detailError });
         }
     };
 
-    const onRefresh = async () => {
+    // const onRefresh = async () => {
+    //     setRefreshing(true);
+    //     await Promise.all([
+    //         loadFridges(),
+    //         fetchStats(),
+    //         fetchLeaderboard(),
+    //         refreshUser(),
+    //         checkNotificationStatus()
+    //     ]);
+    //     setRefreshing(false);
+    // };
+
+    const onRefresh = useCallback(async () => {
         setRefreshing(true);
         await Promise.all([
             loadFridges(),
-            fetchStats(),
-            fetchLeaderboard(),
+            fetchData(),
             refreshUser(),
             checkNotificationStatus()
         ]);
         setRefreshing(false);
-    };
+    }, [loadFridges, fetchData, refreshUser, checkNotificationStatus]);
 
     const handleLogout = async () => {
         Alert.alert("Log Out", "Are you sure?", [
@@ -184,12 +258,16 @@ export default function Profile() {
             // 更新本地 Store
             updateName(editName.trim());
             setShowEditProfileModal(false);
-            Alert.alert("Success", "Profile updated!");
-
             // 刷新以更新排行榜中的名字
             fetchLeaderboard();
+
+            Toast.show({
+                type: 'success',
+                text1: t.profileUpdated,
+                text2: editName.trim(),
+            });
         } catch (error) {
-            Alert.alert("Error", "Failed to update profile");
+            Toast.show({ type: 'error', text1: t.detailError });
         } finally {
             setIsSaving(false);
         }
@@ -197,9 +275,26 @@ export default function Profile() {
 
     const getPreferencesText = () => {
         const prefs = userInfo?.dietaryPreferences;
-        if (!prefs || prefs.length === 0) return "None";
-        if (prefs.length > 2) return `${prefs[0]}, ${prefs[1]} +${prefs.length - 2}`;
-        return prefs.join(", ");
+        if (!prefs || prefs.length === 0) return t.none; // 返回 "None", "Нет", "Жоқ"
+
+        // 翻译前两个偏好
+        // 如果后端存的是 "Vegetarian"，这里会去 t.dietary 里面找对应的俄语/哈语
+        const translatedPrefs = prefs.map(pref =>
+            t.dietary[pref as keyof typeof t.dietary] || pref // 找不到翻译就用原词
+        );
+
+        if (translatedPrefs.length > 2) {
+            // 返回类似: "Вегетарианец, Халяль и еще 2"
+            return `${translatedPrefs[0]}, ${translatedPrefs[1]} ${t.andMore(translatedPrefs.length - 2)}`;
+        }
+
+        return translatedPrefs.join(", ");
+    };
+
+    const getCityText = () => {
+        const city = userInfo?.city || "Almaty";
+        // 去 t.cities 里面找对应的俄语/哈语，找不到就显示英文原词
+        return t.cities[city as keyof typeof t.cities] || city;
     };
 
     // ==========================================
@@ -220,32 +315,32 @@ export default function Profile() {
     const achievements = [
         {
             id: 'beginner',
-            title: 'First Step',
-            desc: 'Joined EcoCart',
+            title: t.achievementsData.beginnerTitle, // 🇬🇧 First Step / 🇷🇺 Первый шаг
+            desc: t.achievementsData.beginnerDesc,
             icon: 'leaf',
             color: '#10B981',
             unlocked: true
         },
         {
             id: 'saver',
-            title: 'Food Saver',
-            desc: 'Consumed 10',
+            title: t.achievementsData.saverTitle,
+            desc: t.achievementsData.saverDesc,
             icon: 'food-apple',
             color: '#F59E0B',
             unlocked: effStats.itemsConsumed >= 10
         },
         {
             id: 'sharer',
-            title: 'Comm. Hero',
-            desc: 'Shared food',
+            title: t.achievementsData.sharerTitle,
+            desc: t.achievementsData.sharerDesc,
             icon: 'account-group',
             color: '#8B5CF6',
             unlocked: points >= 50
         },
         {
             id: 'master',
-            title: 'Zero Waste',
-            desc: '>90% Efficiency',
+            title: t.achievementsData.masterTitle,
+            desc: t.achievementsData.masterDesc,
             icon: 'crown',
             color: '#F59E0B',
             unlocked: totalActions >= 10 && zeroWasteRate >= 0.9
@@ -264,9 +359,9 @@ export default function Profile() {
         return (
             <View className="flex-1 bg-[#F8F9FA] items-center justify-center p-6">
                 <MaterialCommunityIcons name="fridge-off-outline" size={80} color="#9CA3AF" />
-                <Text className="text-xl font-pbold text-gray-800 mt-4 mb-2">No Fridge Selected</Text>
+                <Text className="text-xl font-pbold text-gray-800 mt-4 mb-2">{t.noFridgeSelected}</Text>
                 <TouchableOpacity onPress={() => router.push("/fridge-management/create")} className="bg-primary px-6 py-3 rounded-xl">
-                    <Text className="text-white font-pbold">Go Home</Text>
+                    <Text className="text-white font-pbold">{t.goHome}</Text>
                 </TouchableOpacity>
             </View>
         );
@@ -285,7 +380,7 @@ export default function Profile() {
                     <MaterialCommunityIcons name="food-apple" size={100} color="white" style={{ position: 'absolute', left: -20, top: 20, opacity: 0.1, transform: [{ rotate: '15deg' }] }} />
 
                     <View className="flex-row justify-between items-center mb-6 z-10">
-                        <Text className="text-white font-pbold text-2xl">My Profile</Text>
+                        <Text className="text-white font-pbold text-2xl">{t.myProfile}</Text>
                         <TouchableOpacity
                             onPress={() => {
                                 setEditName(userInfo?.name || ""); // 预填当前名字
@@ -325,18 +420,18 @@ export default function Profile() {
                 </View>
 
                 {/* --- 2. Stats Grid --- */}
-                <View className="-mt-20 mx-6 bg-white rounded-[30px] p-6 shadow-lg shadow-gray-200/50 flex-row justify-between items-center">
-                    <StatItem value={stats.total} label="Total Items" icon="fridge-outline" color="text-slate-800" />
+                <View className="-mt-20 mx-6 bg-white rounded-[30px] p-6 shadow-lg shadow-gray-200/50 flex-row justify-around items-start">
+                    <StatItem value={stats.total} label={t.totalItems} icon="fridge-outline" color="text-slate-800" />
                     <View className="w-[1px] h-10 bg-gray-100" />
-                    <StatItem value={stats.expiring} label="Expiring" icon="alert-circle-outline" color="text-orange-500" />
+                    <StatItem value={stats.expiring} label={t.expiringSoon} icon="alert-circle-outline" color="text-orange-500" />
                     <View className="w-[1px] h-10 bg-gray-100" />
-                    <StatItem value={points} label="Eco Points" icon="leaf" color="text-green-500" />
+                    <StatItem value={points} label={t.ecoPoints} icon="leaf" color="text-green-500" />
                 </View>
 
                 {/* --- 3. Achievements & Badges --- */}
                 <View className="mx-6 mt-6 bg-white rounded-[30px] py-6">
                     <View className="flex-row justify-between items-center mb-4 px-6">
-                        <Text className="text-lg font-pbold text-slate-800">Achievements</Text>
+                        <Text className="text-lg font-pbold text-slate-800">{t.achievements}</Text>
                         <Text className="text-green-600 font-bold text-xs">
                             {achievements.filter(a => a.unlocked).length} / {achievements.length}
                         </Text>
@@ -369,8 +464,11 @@ export default function Profile() {
                 {/* --- 4. 🏆 Leaderboard (Real Data) --- */}
                 <View className="mx-6 mt-6 bg-white rounded-[30px] p-6 ">
                     <View className="flex-row justify-between items-center mb-4">
-                        <Text className="text-lg font-pbold text-slate-800">City Leaderboard</Text>
-                        <Text className="text-gray-400 text-xs font-pmedium">{leaderboard?.city || 'Loading...'}</Text>
+                        <Text className="text-lg font-pbold text-slate-800">{t.cityLeaderboard}</Text>
+                        <Text className="text-gray-400 text-xs font-pmedium">{leaderboard?.city
+                            ? (t.cities[leaderboard.city as keyof typeof t.cities] || leaderboard.city)
+                            : t.loading
+                        }</Text>
                     </View>
 
                     {leaderboard?.topUsers.slice(0, 3).map((user, index) => {
@@ -400,8 +498,8 @@ export default function Profile() {
                             <Text className="text-green-700 font-extrabold text-lg w-6 text-center mr-3">{leaderboard.myRank}</Text>
                             <Image source={{ uri: `https://api.dicebear.com/9.x/avataaars/png?seed=${userInfo?.name || 'User'}` }} className="w-10 h-10 rounded-full bg-white mr-3" />
                             <View className="flex-1">
-                                <Text className="font-pbold text-green-900">You</Text>
-                                <Text className="text-[10px] text-green-700">Top {leaderboard.topPercentage}% in city</Text>
+                                <Text className="font-pbold text-green-900">{t.you}</Text>
+                                <Text className="text-[10px] text-green-700">{t.topInCity(leaderboard.topPercentage)}</Text>
                             </View>
                             <Text className="font-bold text-green-700">{points} pts</Text>
                         </View>
@@ -420,11 +518,20 @@ export default function Profile() {
 
                 {/* --- 6. Preferences --- */}
                 <View className="px-6 mt-8">
-                    <Text className="text-gray-400 font-pbold text-xs uppercase tracking-wider mb-3 ml-2">Preferences</Text>
+                    <Text className="text-gray-400 font-pbold text-xs uppercase tracking-wider mb-3 ml-2">{t.preferences}</Text>
                     <View className="bg-white rounded-[24px] p-2 shadow-sm shadow-gray-100 border border-gray-50">
                         <MenuItem
+                            icon="globe-outline"
+                            title={t.language}
+                            subtitle={language} // 显示当前语言: EN, RU, KZ
+                            hasArrow
+                            onPress={() => setShowLanguageModal(true)}
+                        />
+                        <View className="h-[1px] bg-gray-50 mx-4" />
+
+                        <MenuItem
                             icon="notifications-outline"
-                            title="Notifications"
+                            title={t.notifications}
                             rightElement={
                                 <Switch
                                     value={notificationsEnabled}
@@ -439,9 +546,9 @@ export default function Profile() {
 
                         <MenuItem
                             icon="location-outline"
-                            title="My City"
+                            title={t.myCity}
                             // @ts-ignore
-                            subtitle={userInfo?.city || "Almaty"}
+                            subtitle={getCityText()}
                             hasArrow
                             onPress={() => setShowCityModal(true)}
                         />
@@ -449,7 +556,7 @@ export default function Profile() {
 
                         <MenuItem
                             icon="restaurant-outline"
-                            title="Dietary Restrictions"
+                            title={t.dietaryName}
                             subtitle={getPreferencesText()}
                             hasArrow
                             onPress={() => setShowDietaryModal(true)}
@@ -458,8 +565,8 @@ export default function Profile() {
 
                         <MenuItem
                             icon="calendar-outline"
-                            title="Meal Planner"
-                            subtitle="Weekly meal plan & AI suggestions"
+                            title={t.mealPlanner}
+                            subtitle={t.weeklyPlan}
                             hasArrow
                             onPress={() => router.push("/meal-plan")}
                         />
@@ -467,27 +574,28 @@ export default function Profile() {
 
                         <MenuItem
                             icon="book-outline"
-                            title="My CookBook"
-                            subtitle="Saved Recipes"
+                            title={t.myCookbook}
+                            subtitle={t.savedRecipes}
                             hasArrow
                             onPress={() => router.push("/cookbook")}
                         />
+
                     </View>
                 </View>
 
                 {/* --- 7. Account --- */}
                 <View className="px-6 mt-6">
-                    <Text className="text-gray-400 font-pbold text-xs uppercase tracking-wider mb-3 ml-2">Account</Text>
+                    <Text className="text-gray-400 font-pbold text-xs uppercase tracking-wider mb-3 ml-2">{t.account}</Text>
                     <View className="bg-white rounded-[24px] p-2 shadow-sm shadow-gray-100 border border-gray-50">
-                        <MenuItem icon="card-outline" title="Subscription" subtitle="Free Plan" hasArrow />
+                        <MenuItem icon="card-outline" title={t.subscription} subtitle={t.freePlan} hasArrow />
                         <View className="h-[1px] bg-gray-50 mx-4" />
-                        <MenuItem icon="help-circle-outline" title="Help & Support" hasArrow />
+                        <MenuItem icon="help-circle-outline" title={t.helpAndSupport} hasArrow />
                         <View className="h-[1px] bg-gray-50 mx-4" />
                         <TouchableOpacity onPress={handleLogout} className="flex-row items-center p-4">
                             <View className="w-10 h-10 bg-red-50 rounded-full items-center justify-center mr-3">
                                 <Ionicons name="log-out-outline" size={20} color="#ef4444" />
                             </View>
-                            <Text className="flex-1 text-red-500 font-pbold text-base">Log Out</Text>
+                            <Text className="flex-1 text-red-500 font-pbold text-base">{t.logout}</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -513,7 +621,7 @@ export default function Profile() {
                 <View className="flex-1 bg-black/50 justify-end">
                     <View className="bg-white rounded-t-3xl p-6">
                         <View className="flex-row justify-between items-center mb-6">
-                            <Text className="text-xl font-pbold text-slate-800">Select City</Text>
+                            <Text className="text-xl font-pbold text-slate-800">{t.selectCity}</Text>
                             <TouchableOpacity onPress={() => setShowCityModal(false)}>
                                 <Ionicons name="close" size={24} color="#64748b" />
                             </TouchableOpacity>
@@ -530,7 +638,7 @@ export default function Profile() {
                                         // @ts-ignore
                                         userInfo?.city === city ? 'text-white' : 'text-gray-600'
                                         }`}>
-                                        {city}
+                                        {t.cities[city as keyof typeof t.cities] || city}
                                     </Text>
                                 </TouchableOpacity>
                             ))}
@@ -543,17 +651,17 @@ export default function Profile() {
                 <View className="flex-1 bg-black/50 justify-center px-6">
                     <View className="bg-white rounded-3xl p-6">
                         <View className="flex-row justify-between items-center mb-6">
-                            <Text className="text-xl font-pbold text-slate-800">Edit Profile</Text>
+                            <Text className="text-xl font-pbold text-slate-800">{t.editProfile}</Text>
                             <TouchableOpacity onPress={() => setShowEditProfileModal(false)}>
                                 <Ionicons name="close" size={24} color="#64748b" />
                             </TouchableOpacity>
                         </View>
 
-                        <Text className="text-gray-500 font-pmedium mb-2">Display Name</Text>
+                        <Text className="text-gray-500 font-pmedium mb-2">{t.displayName}</Text>
                         <TextInput
                             value={editName}
                             onChangeText={setEditName}
-                            placeholder="Enter your name"
+                            placeholder={t.enterName}
                             className="bg-gray-100 p-4 rounded-xl font-pbold text-slate-800 mb-8"
                             autoFocus
                         />
@@ -562,12 +670,45 @@ export default function Profile() {
                             onPress={handleSaveProfile}
                             className="bg-primary py-4 rounded-2xl items-center shadow-sm shadow-green-200"
                         >
-                            <Text className="text-white font-pbold text-lg">Save Changes</Text>
+                            <Text className="text-white font-pbold text-lg">{t.saveChanges}</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
             </Modal>
 
+            <Modal visible={showLanguageModal} transparent animationType="slide" onRequestClose={() => setShowLanguageModal(false)}>
+                <View className="flex-1 bg-black/50 justify-end">
+                    <View className="bg-white rounded-t-3xl p-6">
+                        <View className="flex-row justify-between items-center mb-6">
+                            <Text className="text-xl font-pbold text-slate-800">{t.selectLanguage}</Text>
+                            <TouchableOpacity onPress={() => setShowLanguageModal(false)}>
+                                <Ionicons name="close" size={24} color="#64748b" />
+                            </TouchableOpacity>
+                        </View>
+
+                        <View className="gap-3 mb-8">
+                            {(['EN', 'RU', 'KZ'] as Language[]).map(langOpt => (
+                                <TouchableOpacity
+                                    key={langOpt}
+                                    onPress={async () => {
+                                        setLanguage(langOpt);
+                                        setShowLanguageModal(false);
+                                        try {
+                                            await authApi.updateProfile({ language: langOpt } as any);
+                                        } catch (e) { }
+                                    }}
+                                    className={`p-4 rounded-xl border flex-row justify-between items-center ${language === langOpt ? 'bg-primary/10 border-primary' : 'bg-gray-50 border-gray-200'}`}
+                                >
+                                    <Text className={`font-pbold text-lg ${language === langOpt ? 'text-primary' : 'text-gray-700'}`}>
+                                        {langOpt === 'EN' ? 'English' : langOpt === 'RU' ? 'Русский' : 'Қазақша'}
+                                    </Text>
+                                    {language === langOpt && <Ionicons name="checkmark-circle" size={24} color="#22C55E" />}
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    </View>
+                </View>
+            </Modal>
 
         </View>
     );

@@ -19,11 +19,17 @@ import MapView, { Circle, Marker } from "react-native-maps";
 import { LinearGradient } from "expo-linear-gradient";
 import { communityApi, CommunityPost } from "../../api/community";
 import { useUserStore } from "../../store/userStore";
+import { translations } from "../../i18n/translations";
+import Toast from "react-native-toast-message";
+
+const { width } = Dimensions.get('window');
 
 export default function CommunityDetail() {
     const { id } = useLocalSearchParams();
     const router = useRouter();
-    const { userInfo } = useUserStore();
+    const { userInfo, language } = useUserStore();
+    const t = translations[language];
+
     const [post, setPost] = useState<CommunityPost | null>(null);
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false);
@@ -45,7 +51,11 @@ export default function CommunityDetail() {
     const handleCopy = async () => {
         if (!post) return;
         await Clipboard.setStringAsync(post.contact);
-        Alert.alert("Copied", "Phone number copied!");
+        Toast.show({
+            type: 'success',
+            text1: t.phoneNumberCopied,
+            text2: post.contact
+        });
     };
 
     const handleContact = () => {
@@ -71,9 +81,13 @@ export default function CommunityDetail() {
                         await communityApi.createReservation(post!._id, "I'd like to pick this up!");
                         // Refresh post to show updated status
                         fetchDetail();
-                        Alert.alert("Requested!", "Owner has been notified.");
+                        Toast.show({
+                            type: 'success',
+                            text1: t.requestSent,
+                            text2: t.requestSentMsg
+                        });
                     } catch (error) {
-                        Alert.alert("Error", "Failed to reserve item");
+                        Toast.show({ type: 'error', text1: t.detailError });
                     } finally {
                         setActionLoading(false);
                     }
@@ -87,8 +101,13 @@ export default function CommunityDetail() {
         try {
             await communityApi.updateStatus(post!._id, status);
             fetchDetail();
+            Toast.show({
+                type: 'success',
+                text1: t.statusUpdated,
+                text2: getStatusText(status)
+            });
         } catch (error) {
-            Alert.alert("Error", "Failed to update status");
+            Toast.show({ type: 'error', text1: t.detailError });
         } finally {
             setActionLoading(false);
         }
@@ -98,9 +117,19 @@ export default function CommunityDetail() {
         Alert.alert("Delete Post", "Are you sure?", [
             { text: "Cancel", style: "cancel" },
             {
-                text: "Delete", style: 'destructive', onPress: async () => {
-                    await communityApi.delete(post!._id);
-                    router.replace("/community");
+                text: "Delete",
+                style: 'destructive',
+                onPress: async () => {
+                    try {
+                        await communityApi.delete(post!._id);
+                        Toast.show({
+                            type: 'success',
+                            text1: t.postDeleted
+                        });
+                        router.replace("/community");
+                    } catch (e) {
+                        Toast.show({ type: 'error', text1: t.detailError });
+                    }
                 }
             }
         ]);
@@ -114,7 +143,10 @@ export default function CommunityDetail() {
         const coords = post.location.exactCoords || post.location.approximateCoords;
 
         if (!coords) {
-            Alert.alert("Error", "No coordinates available");
+            Toast.show({
+                type: 'info',
+                text1: t.noCoordinates
+            });
             return;
         }
 
@@ -146,6 +178,13 @@ export default function CommunityDetail() {
     const isTaken = post.status === 'taken';
     const locationCoords = post.location.approximateCoords;
 
+    const getStatusText = (status: string) => {
+        switch (status) {
+            case 'taken': return t.statusTaken;
+            case 'reserved': return t.statusReserved;
+            default: return t.free; // 或者 statusAvailable
+        }
+    };
     return (
         <View className="flex-1 bg-white">
             <StatusBar barStyle="dark-content" />
@@ -153,7 +192,7 @@ export default function CommunityDetail() {
             {/* Header Section: 增加阴影和更高级的模糊效果 */}
             <View className="h-80 w-full relative">
                 {post.imageUrl ? (
-                    <Image source={{ uri: post.imageUrl }} className="w-full h-full" resizeMode="contain" />
+                    <Image source={{ uri: post.imageUrl }} className="w-full h-full" resizeMode="cover" />
                 ) : (
                     <View className="w-full h-full items-center justify-center bg-purple-50">
                         <MaterialCommunityIcons name="food-variant" size={80} color="#DDD6FE" />
@@ -176,7 +215,7 @@ export default function CommunityDetail() {
                 {/* 悬浮的状态标签：右下角，更有设计感 */}
                 <View className={`absolute bottom-12 right-6 px-4 py-2 rounded-2xl backdrop-blur-md shadow-lg ${isTaken ? 'bg-gray-100/90' : 'bg-green-500/90'}`}>
                     <Text className={`font-pbold text-xs uppercase tracking-widest ${isTaken ? 'text-gray-500' : 'text-white'}`}>
-                        {post.status}
+                        {getStatusText(post.status)}
                     </Text>
                 </View>
             </View>
@@ -194,7 +233,9 @@ export default function CommunityDetail() {
                         <View className="flex-row flex-wrap gap-2">
                             {post.tags.map(tag => (
                                 <View key={tag} className="bg-purple-50 px-4 py-1.5 rounded-xl border border-purple-100">
-                                    <Text className="text-purple-600 font-psemibold text-xs">{tag}</Text>
+                                    <Text className="text-purple-600 font-psemibold text-xs">
+                                        {t.categories ? (t.categories[tag as keyof typeof t.categories] || tag) : tag}
+                                    </Text>
                                 </View>
                             ))}
                         </View>
@@ -209,12 +250,12 @@ export default function CommunityDetail() {
                             />
                         </View>
                         <View className="flex-1">
-                            <Text className="text-slate-400 text-xs font-pmedium">Donated by</Text>
-                            <Text className="font-pbold text-slate-800 text-lg">{isOwner ? "You" : post.postedBy.name}</Text>
+                            <Text className="text-slate-400 text-xs font-pmedium">{t.donatedBy}</Text>
+                            <Text className="font-pbold text-slate-800 text-lg">{isOwner ? t.you : post.postedBy.name}</Text>
                         </View>
                         {!isOwner && (
                             <View className="bg-green-100 px-3 py-1 rounded-lg">
-                                <Text className="text-green-700 text-[10px] font-pbold uppercase">Verified</Text>
+                                <Text className="text-green-700 text-[10px] font-pbold uppercase">{t.verified}</Text>
                             </View>
                         )}
                     </View>
@@ -223,15 +264,20 @@ export default function CommunityDetail() {
                     <View className="mb-8">
                         <View className="flex-row items-center mb-3">
                             <MaterialCommunityIcons name="text-box" size={20} color="#6366f1" />
-                            <Text className="text-slate-900 font-pbold text-lg ml-2">Story</Text>
+                            <Text className="text-slate-900 font-pbold text-lg ml-2">{t.story}</Text>
                         </View>
                         <Text className="text-slate-500 leading-7 text-base font-pregular bg-indigo-50/30 p-4 rounded-2xl italic">
-                            "{post.description}"
+                            {post.description[language as keyof typeof post.description]}
+                        </Text>
+                        <Text className="text-xs text-gray-400 mt-2 text-right">
+                            {t.postedOn(new Date(post.createdAt).toLocaleDateString())}
                         </Text>
                     </View>
 
                     {/* 5. Contact Info Block */}
-                    <Text className="text-slate-900 font-pbold text-lg mb-3">Contact Provider</Text>
+                    <Text className="text-slate-900 font-pbold text-lg mb-3">
+                        {t.contactProvider}
+                    </Text>
                     <TouchableOpacity
                         onPress={handleCopy}
                         activeOpacity={0.7}
@@ -242,7 +288,7 @@ export default function CommunityDetail() {
                                 <Ionicons name="call" size={20} color="#6366f1" />
                             </View>
                             <View>
-                                <Text className="text-slate-400 text-[10px] font-pbold uppercase mb-0.5">Phone Number</Text>
+                                <Text className="text-slate-400 text-[10px] font-pbold uppercase mb-0.5">{t.phoneNumber}</Text>
                                 <Text className="text-slate-900 font-pbold text-base">{post.contact}</Text>
                             </View>
                         </View>
@@ -258,10 +304,10 @@ export default function CommunityDetail() {
                         <View className="flex-row justify-between items-center mb-4">
                             <View className="flex-row items-center">
                                 <MaterialCommunityIcons name="map-marker-radius" size={20} color="#ef4444" />
-                                <Text className="text-slate-900 font-pbold text-lg ml-2">Pickup Location</Text>
+                                <Text className="text-slate-900 font-pbold text-lg ml-2">{t.pickupLocation}</Text>
                             </View>
                             <TouchableOpacity onPress={handleOpenMap}>
-                                <Text className="text-primary font-pbold text-xs uppercase">Get Directions</Text>
+                                <Text className="text-primary font-pbold text-xs uppercase">{t.getDirections}</Text>
                             </TouchableOpacity>
                         </View>
 
@@ -305,7 +351,7 @@ export default function CommunityDetail() {
                                         {post.location.publicDescription}
                                     </Text>
                                     <Text className="text-slate-400 text-[10px] font-pmedium">
-                                        {post.location.city} • {post.location.district || 'Nearby'}
+                                        {t.cities ? (t.cities[post.location.city as keyof typeof t.cities] || post.location.city) : post.location.city} • {post.location.district || t.nearby}
                                     </Text>
                                 </View>
                             </View>
@@ -332,7 +378,7 @@ export default function CommunityDetail() {
                             className={`flex-1 h-16 rounded-3xl items-center justify-center shadow-lg ${isTaken ? 'bg-green-600 shadow-green-200' : 'bg-slate-900 shadow-slate-300'}`}
                         >
                             <Text className="text-white font-pbold text-lg">
-                                {isTaken ? "Relist Now" : "Mark as Taken"}
+                                {isTaken ? t.relistNow : t.markAsTaken}
                             </Text>
                         </TouchableOpacity>
                     </View>
@@ -343,7 +389,7 @@ export default function CommunityDetail() {
                             disabled={isTaken}
                             className={`flex-1 h-16 rounded-3xl items-center justify-center border-2 ${isTaken ? 'border-slate-100 bg-slate-50' : 'border-slate-200 bg-white'}`}
                         >
-                            <Text className={`font-pbold text-lg ${isTaken ? 'text-slate-300' : 'text-slate-800'}`}>Request</Text>
+                            <Text className={`font-pbold text-lg ${isTaken ? 'text-slate-300' : 'text-slate-800'}`}>{t.request}</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity
@@ -352,7 +398,7 @@ export default function CommunityDetail() {
                             className={`flex-1 h-16 rounded-3xl flex-row items-center justify-center shadow-xl ${isTaken ? 'bg-slate-200 shadow-none' : 'bg-purple-600 shadow-purple-200'}`}
                         >
                             <Ionicons name="chatbubble-ellipses" size={20} color="white" />
-                            <Text className="text-white font-pbold text-lg ml-2">Chat</Text>
+                            <Text className="text-white font-pbold text-lg ml-2">{t.chat}</Text>
                         </TouchableOpacity>
                     </View>
                 )}

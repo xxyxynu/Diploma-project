@@ -2,6 +2,8 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import React from "react";
 import { Alert, Image, Text, TouchableOpacity, View } from "react-native";
 import { FridgeItem } from "../api/food";
+import { useUserStore } from "@/store/userStore";
+import { translations } from "../i18n/translations";
 
 interface FoodItemCardProps {
     item: FridgeItem;
@@ -11,6 +13,8 @@ interface FoodItemCardProps {
 }
 
 export const FoodItemCard = ({ item, onPress, onDelete, showDeleteButton = true }: FoodItemCardProps) => {
+    const { language } = useUserStore();
+    const t = translations[language];
 
     // 计算剩余天数
     const now = new Date();
@@ -58,7 +62,7 @@ export const FoodItemCard = ({ item, onPress, onDelete, showDeleteButton = true 
                     {item.name}
                 </Text>
                 <Text className="text-gray-400 text-xs mb-2">
-                    {item.quantity} {item.unit}{item.brand ? ` • ${item.brand}` : ''}
+                    {item.quantity} {t.units ? (t.units[item.unit as keyof typeof t.units] || item.unit) : item.unit}{item.brand ? ` • ${item.brand}` : ''}
                 </Text>
 
                 {/* 状态徽章 */}
@@ -70,10 +74,10 @@ export const FoodItemCard = ({ item, onPress, onDelete, showDeleteButton = true 
                     />
                     <Text className={`text-xs font-bold ml-1 ${badgeText}`}>
                         {daysLeft < 0
-                            ? `Expired ${Math.abs(daysLeft)} days`
+                            ? t.expiredDays(Math.abs(daysLeft))
                             : daysLeft === 0
-                                ? 'Expires Today!'
-                                : `${daysLeft} days left`}
+                                ? t.expiresToday
+                                : t.daysLeft(daysLeft)}
                     </Text>
                 </View>
             </View>

@@ -1,5 +1,4 @@
 import { DetailBox } from "@/components/DetailBox";
-import { useUserStore } from "@/store/userStore";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -15,16 +14,20 @@ import {
     View
 } from "react-native";
 import { foodApi, FridgeItem } from "../../api/food";
+import { translations } from "../../i18n/translations";
+import { useUserStore } from "../../store/userStore";
+import Toast from "react-native-toast-message";
 
 const { width } = Dimensions.get("window");
 
 export default function FoodDetail() {
     const { id } = useLocalSearchParams();
     const router = useRouter();
+    const { refreshUser, language } = useUserStore();
+    const t = translations[language];
 
     const [item, setItem] = useState<FridgeItem | null>(null);
     const [loading, setLoading] = useState(true);
-    const { refreshUser } = useUserStore();
 
     useEffect(() => {
         if (id) fetchDetail();
@@ -35,79 +38,83 @@ export default function FoodDetail() {
             const data = await foodApi.getOne(id as string);
             setItem(data);
         } catch (error) {
-            Alert.alert("Error", "Could not load item details.");
+            Alert.alert(t.detailError, t.couldNotLoadItem);
             router.back();
         } finally {
             setLoading(false);
         }
     };
 
-
     const handleConsume = async () => {
-        Alert.alert("Yum! 😋", `Did you finish the ${item?.name}?`, [
-            { text: "Not yet", style: "cancel" },
+        Alert.alert("😋", t.yumTitle(item?.name ?? ""), [
+            { text: t.notYet, style: "cancel" },
             {
-                text: "Yes, It was delicious!",
+                text: t.yesDelicious,
                 onPress: async () => {
                     try {
-                        // ✅ 改为 consume
                         await foodApi.consume(id as string);
-                        refreshUser(); // 刷新积分
-
-                        Alert.alert("Awesome!", "+10 Eco Points Added!");
+                        refreshUser();
+                        Toast.show({
+                            type: 'success',
+                            text1: t.awesomeTitle,
+                            text2: t.itemConsumedSuccess,
+                        });
                         router.replace("/(tabs)/fridge");
                     } catch (error) {
-                        Alert.alert("Error", "Action failed.");
+                        Toast.show({ type: 'error', text1: t.detailError, text2: t.actionFailed });
                     }
                 }
             }
         ]);
     };
 
-    // 2. 删除 (浪费)
     const handleDelete = async () => {
-        Alert.alert("Delete Item", "Is this item wasted or just removed?", [
-            { text: "Cancel", style: "cancel" },
+        Alert.alert(t.deleteItemTitle, t.deleteItemDesc, [
+            { text: t.cancel, style: "cancel" },
             {
-                text: "Just Remove",
+                text: t.justRemove,
                 onPress: async () => {
                     try {
                         await foodApi.delete(id as string);
+                        Toast.show({ type: 'success', text1: t.itemRemovedSuccess });
                         router.back();
                     } catch (error) {
-                        Alert.alert("Error", "Failed to remove item. Please try again.");
+                        Toast.show({ type: 'error', text1: t.detailError, text2: t.failedRemoveItem });
                     }
                 }
             },
             {
-                text: "Wasted (Expired)", // 浪费
+                text: t.wastedExpired,
                 style: "destructive",
                 onPress: async () => {
                     try {
                         await foodApi.waste(id as string);
-                        refreshUser(); // 刷新数据
+                        refreshUser();
+                        Toast.show({
+                            type: 'info', // 浪费使用 info 颜色（灰色/蓝色），不鼓励也不报错
+                            text1: t.wastedExpired,
+                            text2: t.itemWastedSuccess
+                        });
                         router.back();
                     } catch (error) {
-                        Alert.alert("Error", "Failed to mark item as wasted. Please try again.");
+                        Toast.show({ type: 'error', text1: t.detailError, text2: t.failedMarkWasted });
                     }
                 }
             }
         ]);
     };
-
 
     const handleEdit = () => {
         if (!item) return;
         router.push({
             pathname: "/add-manual",
             params: {
-                id: item._id, // 👈 必须传 ID，AddManual 靠这个判断是否是编辑
+                id: item._id,
                 name: item.name,
                 brand: item.brand,
-                quantity: String(item.quantity), // 转字符串传过去比较稳
+                quantity: String(item.quantity),
                 unit: item.unit,
                 category: item.category,
-                // 转成 ISO 字符串，AddManual 会把它 new Date() 回来
                 expiryDate: new Date(item.expiryDate).toISOString(),
                 productionDate: item.productionDate ? new Date(item.productionDate).toISOString() : "",
                 imageUrl: item.imageUrl,
@@ -124,27 +131,27 @@ export default function FoodDetail() {
     };
 
     const formatDate = (dateString: Date) => {
-        return new Date(dateString).toLocaleDateString("en-US", {
+        return new Date(dateString).toLocaleDateString(t.dateLocale, {
             year: "numeric", month: "short", day: "numeric"
         });
     };
 
     const days = getDaysLeft();
 
-    let statusColor = "#22c55e"; // Green
+    let statusColor = "#22c55e";
     let statusBg = "bg-green-100";
-    let statusText = "Fresh";
+    let statusText = t.statusFresh;
     let statusIcon = "leaf";
 
     if (days < 0) {
-        statusColor = "#ef4444"; // Red
+        statusColor = "#ef4444";
         statusBg = "bg-red-100";
-        statusText = "Expired";
+        statusText = t.statusExpired;
         statusIcon = "alert-circle";
     } else if (days <= 3) {
-        statusColor = "#f97316"; // Orange
+        statusColor = "#f97316";
         statusBg = "bg-orange-100";
-        statusText = "Expiring Soon";
+        statusText = t.statusExpiringSoon;
         statusIcon = "time";
     }
 
@@ -162,6 +169,7 @@ export default function FoodDetail() {
         <View className="flex-1 bg-gray-50">
             <StatusBar barStyle="light-content" />
 
+            {/* Hero image / colour block */}
             <View className="relative h-[45%]">
                 {item.imageUrl ? (
                     <Image
@@ -174,7 +182,6 @@ export default function FoodDetail() {
                         <MaterialCommunityIcons name="food" size={100} color={statusColor} opacity={0.3} />
                     </View>
                 )}
-                {/* 顶部渐变遮罩，为了让白色按钮更清晰 */}
                 <View className="absolute top-0 left-0 right-0 h-32 bg-black/20" />
 
                 <View className="absolute top-14 left-6 right-6 flex-row justify-between z-10">
@@ -194,17 +201,17 @@ export default function FoodDetail() {
                 </View>
             </View>
 
-            {/* 内容主体：向上偏移覆盖图片底部 */}
+            {/* Main content */}
             <ScrollView
                 className="flex-1 -mt-12 bg-white rounded-t-[45px] shadow-2xl shadow-black/20"
                 contentContainerStyle={{ paddingBottom: 140 }}
             >
                 <View className="px-8 pt-10">
-                    {/* 核心信息 */}
+                    {/* Name + price */}
                     <View className="flex-row justify-between items-start mb-8">
                         <View className="flex-1 mr-4">
                             <Text className="text-gray-400 font-pbold text-xs uppercase tracking-widest mb-1">
-                                {item.category}
+                                {t.categories[item.category] || item.category}
                             </Text>
                             <Text className="text-3xl font-pbold text-slate-900 leading-tight">
                                 {item.name}
@@ -215,60 +222,59 @@ export default function FoodDetail() {
                                 </Text>
                             )}
                         </View>
-
-                        {/* 价格/价值标识 */}
                         <View className="items-end">
                             <Text className="text-2xl font-pbold text-primary">₸ {item.price || 0}</Text>
-                            <Text className="text-gray-400 text-xs font-psemibold">VALUE</Text>
+                            <Text className="text-gray-400 text-xs font-psemibold">{t.value}</Text>
                         </View>
                     </View>
 
-                    {/* 状态磁贴：更现代的设计 */}
+                    {/* Status tile */}
                     <View className={`rounded-[32px] p-6 mb-8 flex-row items-center ${statusBg}`}>
                         <View className="w-14 h-14 bg-white/60 rounded-2xl items-center justify-center mr-4">
                             <Ionicons name={statusIcon as any} size={32} color={statusColor} />
                         </View>
                         <View className="flex-1">
                             <Text className="text-xs font-pbold uppercase opacity-60" style={{ color: statusColor }}>
-                                Storage Status
+                                {t.storageStatus}
                             </Text>
                             <Text className="text-xl font-pbold text-slate-900">
-                                {days < 0 ? 'Expired' : `${days} Days Left`}
+                                {days < 0 ? t.statusExpired : t.daysLeft(days)}
                             </Text>
                         </View>
                         <View className="items-end">
-                            <Text className="text-xs font-pbold text-slate-400 mb-1">{item.quantity} {item.unit}</Text>
-                            {/* 动态圆形进度 */}
+                            <Text className="text-xs font-pbold text-slate-400 mb-1">
+                                {item.quantity} {item.unit}
+                            </Text>
                             <View className="w-2 h-2 rounded-full" style={{ backgroundColor: statusColor }} />
                         </View>
                     </View>
 
-                    {/* Bento Grid 详情区块 */}
+                    {/* Bento detail boxes */}
                     <View className="flex-row flex-wrap gap-4 mb-8">
                         <DetailBox
                             icon="calendar"
-                            label="Best Before"
+                            label={t.bestBefore}
                             value={formatDate(item.expiryDate)}
-                            subValue={days < 0 ? "Past" : "Upcoming"}
+                            subValue={days < 0 ? t.past : t.upcoming}
                         />
                         <DetailBox
                             icon="barcode"
-                            label="Barcode"
+                            label={t.barcode}
                             value={item.barcode || "N/A"}
                         />
                     </View>
 
-                    {/* 备注：带装饰的引用样式 */}
+                    {/* Notes */}
                     <View className="bg-slate-50 p-6 rounded-[28px] border border-slate-100">
-                        <Text className="text-slate-900 font-pbold text-lg mb-2">Chef's Notes</Text>
+                        <Text className="text-slate-900 font-pbold text-lg mb-2">{t.chefsNotes}</Text>
                         <Text className="text-slate-500 leading-6 font-pregular">
-                            {item.notes || "No special instructions for this item."}
+                            {item.notes || t.noNotes}
                         </Text>
                     </View>
                 </View>
             </ScrollView>
 
-            {/* 底部按钮：使用渐变背景或大圆角，增加触感反馈 */}
+            {/* Bottom action bar */}
             <View className="absolute bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl px-8 pt-4 pb-10 flex-row gap-4 items-center">
                 <TouchableOpacity
                     onPress={handleDelete}
@@ -283,7 +289,7 @@ export default function FoodDetail() {
                     className="flex-1 h-16 bg-primary rounded-3xl flex-row justify-center items-center shadow-lg shadow-green-200"
                 >
                     <MaterialCommunityIcons name="silverware-fork-knife" size={24} color="white" />
-                    <Text className="ml-3 font-pbold text-white text-xl">Eat & Save</Text>
+                    <Text className="ml-3 font-pbold text-white text-xl">{t.eatAndSave}</Text>
                 </TouchableOpacity>
             </View>
         </View>

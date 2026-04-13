@@ -8,7 +8,11 @@ export interface CommunityPost {
         email: string;
     };
     name: string;
-    description: string;
+    description: {
+        en: string;
+        ru: string;
+        kz: string;
+    };
     location: {
         city: string;
         district?: string;
@@ -79,6 +83,19 @@ export interface CreatePostData {
     exactAddress?: string;
     latitude: number;
     longitude: number;
+}
+
+export interface Charity {
+    _id: string;
+    name: string;
+    description: string;
+    city: string;
+    address: string;
+    contact: string;
+    website: string;
+    imageUrl: string;
+    needs: string[];
+    verified: boolean;
 }
 
 export const communityApi = {
@@ -152,6 +169,11 @@ export const communityApi = {
         const response = await apiClient.get<{ messages: Message[] }>(
             `/community/${id}/messages`
         );
+        return response.data;
+    },
+
+    getCharities: async () => {
+        const response = await apiClient.get<Charity[]>("/community/charities");
         return response.data;
     }
 };
