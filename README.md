@@ -1,5 +1,4 @@
-<div align="center">
-  <img src="https://img.icons8.com/color/120/000000/green-earth.png" alt="EcoCart Logo" width="100"/>
+<img width="591" height="1280" alt="photo_2026-04-14_10-06-45" src="https://github.com/user-attachments/assets/b21d1fcf-74b5-4c22-b1bc-70869506c7d6" /><div align="center">
   <h1>🌱 EcoCart</h1>
   <p><b>A Smart Zero-Waste Household Management & Community Sharing Platform</b></p>
   
@@ -40,6 +39,13 @@ By converging **Generative AI (LLMs)**, **Computer Vision (OCR)**, and **Locatio
 ### 🌐 5. Seamless Localization (i18n)
 * **Triple Language Support:** Instant, zero-latency switching between English, Russian, and Kazakh utilizing a pure `Zustand` state-driven dictionary pattern.
 
+| Impact Dashboard | AI Receipt Scanner | Community Share (Map) | AI Weekly Planner |
+|:---:|:---:|:---:|:---:|
+| <img width="591" height="1280" alt="photo_2026-04-14_10-06-44" src="https://github.com/user-attachments/assets/7f75cdea-52e6-49e9-a5c0-e59550fb3f68" /> | 
+<img width="591" height="1280" alt="photo_2026-02-15_11-16-39" src="https://github.com/user-attachments/assets/81c45252-50d9-43b9-8863-732bacd05f67" /> | 
+<img width="591" height="1280" alt="photo_2026-04-14_10-06-46" src="https://github.com/user-attachments/assets/cb6b29b7-3e5c-40ac-a5f2-fb1c9c7d1da8" /> |
+<img width="591" height="1280" alt="photo_2026-04-14_10-06-45" src="https://github.com/user-attachments/assets/af39a5ca-a51e-4092-9ee1-508b034b967c" /> |
+
 ---
 
 ## 🛠️ Technology Stack
@@ -74,7 +80,7 @@ By converging **Generative AI (LLMs)**, **Computer Vision (OCR)**, and **Locatio
 ### 1. Backend Setup
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/EcoCart.git
+git clone https://github.com/xxyxynu/Diploma-project.git
 
 # Navigate to backend
 cd EcoCart/backend
