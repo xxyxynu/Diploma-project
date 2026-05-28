@@ -41,10 +41,7 @@ By converging **Generative AI (LLMs)**, **Computer Vision (OCR)**, and **Locatio
 
 | Impact Dashboard | AI Receipt Scanner | Community Share (Map) | AI Weekly Planner |
 |:---:|:---:|:---:|:---:|
-| <img width="200" alt="photo_2026-04-14_10-06-44" src="https://github.com/user-attachments/assets/7f75cdea-52e6-49e9-a5c0-e59550fb3f68" /> | 
-<img width="200" alt="photo_2026-02-15_11-16-39" src="https://github.com/user-attachments/assets/81c45252-50d9-43b9-8863-732bacd05f67" /> | 
-<img width="200" alt="photo_2026-04-14_10-06-46" src="https://github.com/user-attachments/assets/cb6b29b7-3e5c-40ac-a5f2-fb1c9c7d1da8" /> |
-<img width="200" alt="photo_2026-04-14_10-06-45" src="https://github.com/user-attachments/assets/af39a5ca-a51e-4092-9ee1-508b034b967c" /> |
+| <img width="200" alt="photo_2026-04-14_10-06-44" src="https://github.com/user-attachments/assets/7f75cdea-52e6-49e9-a5c0-e59550fb3f68" /> | <img width="200" alt="photo_2026-02-15_11-16-39" src="https://github.com/user-attachments/assets/81c45252-50d9-43b9-8863-732bacd05f67" /> | <img width="200" alt="photo_2026-04-14_10-06-46" src="https://github.com/user-attachments/assets/cb6b29b7-3e5c-40ac-a5f2-fb1c9c7d1da8" /> | <img width="200" alt="photo_2026-04-14_10-06-45" src="https://github.com/user-attachments/assets/af39a5ca-a51e-4092-9ee1-508b034b967c" /> |
 
 ---
 
