@@ -1,50 +1,89 @@
-# Welcome to your Expo app 👋
+<div align="center">
+  <img src="https://img.icons8.com/color/120/000000/green-earth.png" alt="EcoCart Logo" width="100"/>
+  <h1>🌱 EcoCart</h1>
+  <p><b>A Smart Zero-Waste Household Management & Community Sharing Platform</b></p>
+  
+  [![React Native](https://img.shields.io/badge/React_Native-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactnative.dev/)
+  [![Node.js](https://img.shields.io/badge/Node.js-43853D?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
+  [![MongoDB](https://img.shields.io/badge/MongoDB-4EA94B?style=for-the-badge&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
+  [![OpenAI](https://img.shields.io/badge/OpenAI-412991?style=for-the-badge&logo=openai&logoColor=white)](https://openai.com/)
+</div>
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+<br/>
 
-## Get started
+## 📖 Overview
 
-1. Install dependencies
+**EcoCart** is a production-grade, full-stack mobile ecosystem developed as a Diploma Project. It aims to tackle the global food waste crisis and mitigate household economic inflation (with a localized focus on Kazakhstan). 
 
-   ```bash
-   npm install
-   ```
+By converging **Generative AI (LLMs)**, **Computer Vision (OCR)**, and **Location-Based Services (LBS)**, EcoCart transforms passive digital inventory tracking into an active, gamified, and privacy-preserving zero-waste lifestyle loop: *Buy ➔ Store ➔ Consume ➔ Share*.
 
-2. Start the app
+## ✨ Core Features
 
-   ```bash
-   npx expo start
-   ```
+### 📸 1. Multimodal Intelligent Document Processing (IDP)
+* **AI Receipt Scanner:** Ditch manual data entry. Take a photo of a supermarket receipt (e.g., Magnum, Small), and the system uses `OCR.space API` to extract raw Cyrillic/Latin text.
+* **LLM Semantic Middleware:** The raw text is passed to `GPT-4o-mini` with strict Prompt Engineering to filter out non-food items (e.g., plastic bags), translate Russian/Kazakh to English, and force a deterministic JSON output for batch database insertion.
 
-In the output, you'll find options to open the app in a
+### 👨‍🍳 2. Context-Aware AI Chef & Meal Planner
+* **Zero-Waste Recipes:** Select expiring ingredients from the fridge, and the AI generates customized, structured recipes.
+* **Dietary Enforcement:** The AI strictly respects user profiles (e.g., Halal, Vegan, Nut-Free) to prevent hazardous AI "hallucinations".
+* **Auto-Weekly Planner:** Generates a full 21-meal 7-day schedule based on current fridge inventory.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+### 🌍 3. Privacy-First Community Share (LBS)
+* **UNILO Spatial Cloaking:** Users can share surplus food with neighbors. To protect residential privacy, exact coordinates are mathematically obfuscated. The public feed only displays a 500m "Probability Circle" using MongoDB's `2dsphere` spatial indexing.
+* **Zero-Trust State Machine:** Exact addresses are cryptographically locked and only revealed after a formal Request ➔ Approve handshake.
+* **Smart Contact:** Deep linking integration automatically opens **2GIS** for navigation and **WhatsApp** with pre-filled greeting messages.
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+### 📊 4. ESG Impact Dashboard & Gamification
+* **Real-time Telemetry:** Every consumed or shared item calculates avoided CO₂ emissions (kg) and financial savings (KZT) based on dynamic food category coefficients.
+* **Data Visualization:** Built-in `react-native-chart-kit` renders beautiful Bezier line charts (Points Growth) and progress rings (Zero-Waste Efficiency).
 
-## Get a fresh project
+### 🌐 5. Seamless Localization (i18n)
+* **Triple Language Support:** Instant, zero-latency switching between English, Russian, and Kazakh utilizing a pure `Zustand` state-driven dictionary pattern.
 
-When you're ready, run:
+---
 
+## 🛠️ Technology Stack
+
+**Frontend (Mobile App)**
+* React Native & Expo (SDK 54)
+* Zustand (Global State & Persistence)
+* NativeWind (Tailwind CSS for React Native)
+* Expo Camera, Image Picker, Location, Notifications
+
+**Backend (RESTful API)**
+* Node.js & Express.js
+* MongoDB Atlas & Mongoose ODM (NoSQL & Geospatial Queries)
+* JSON Web Tokens (JWT) & bcrypt (Authentication)
+* `node-cron` (Automated Expiry Push Notifications)
+
+**Cloud & Third-Party APIs**
+* OpenAI API (`gpt-4o-mini`)
+* OCR.space API
+* Cloudinary (CDN Image Hosting via Base64 upload)
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+* Node.js (v18+)
+* Expo CLI (`npm install -g expo-cli`)
+* A MongoDB Atlas Cluster
+* API Keys for OpenAI, OCR.space, and Cloudinary.
+
+### 1. Backend Setup
 ```bash
-npm run reset-project
-```
+# Clone the repository
+git clone https://github.com/yourusername/EcoCart.git
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+# Navigate to backend
+cd EcoCart/backend
 
-## Learn more
+# Install dependencies
+npm install
 
-To learn more about developing your project with Expo, look at the following resources:
+# Configure Environment Variables
+# Create a .env file in the backend root directory (See .env.example)
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+# Start the server
+npm start
